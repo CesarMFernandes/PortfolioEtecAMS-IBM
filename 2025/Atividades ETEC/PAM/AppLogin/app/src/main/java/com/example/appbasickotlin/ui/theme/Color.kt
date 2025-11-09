@@ -1,4 +1,4 @@
-package com.example.applogin.ui.theme
+package com.example.appbasickotlin.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
