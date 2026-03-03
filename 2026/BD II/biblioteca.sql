@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 24/02/2026 às 19:24
+-- Tempo de geração: 03/03/2026 às 19:12
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -33,7 +33,7 @@ use biblioteca;
 CREATE TABLE `autor` (
   `IdAutor` int(11) NOT NULL,
   `Nome` varchar(50) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -45,7 +45,7 @@ CREATE TABLE `categoria` (
   `IdCategoria` int(11) NOT NULL,
   `Categoria` varchar(30) NOT NULL,
   `Descricao` varchar(100) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -57,7 +57,7 @@ CREATE TABLE `categorialivro` (
   `IdCategoriaLivro` int(11) NOT NULL,
   `IdCategoria` int(11) NOT NULL,
   `IdLivro` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -71,7 +71,7 @@ CREATE TABLE `emprestimo` (
   `DataDevolucao` date NOT NULL,
   `IdUsuario` int(11) NOT NULL,
   `IdLivro` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -84,7 +84,7 @@ CREATE TABLE `livro` (
   `Nome` varchar(40) NOT NULL,
   `Descricao` varchar(100) NOT NULL,
   `IdAutor` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -96,7 +96,7 @@ CREATE TABLE `usuario` (
   `IdUsuario` int(11) NOT NULL,
   `Nome` varchar(50) NOT NULL,
   `CPF` varchar(14) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Índices para tabelas despejadas
@@ -118,19 +118,24 @@ ALTER TABLE `categoria`
 -- Índices de tabela `categorialivro`
 --
 ALTER TABLE `categorialivro`
-  ADD PRIMARY KEY (`IdCategoriaLivro`);
+  ADD PRIMARY KEY (`IdCategoriaLivro`),
+  ADD KEY `FK_ConstraintName` (`IdCategoria`),
+  ADD KEY `FK_ConstraintName2` (`IdLivro`);
 
 --
 -- Índices de tabela `emprestimo`
 --
 ALTER TABLE `emprestimo`
-  ADD PRIMARY KEY (`IdEmprestimo`);
+  ADD PRIMARY KEY (`IdEmprestimo`),
+  ADD KEY `FK_ConstraintName4` (`IdUsuario`),
+  ADD KEY `FK_ConstraintName5` (`IdLivro`);
 
 --
 -- Índices de tabela `livro`
 --
 ALTER TABLE `livro`
-  ADD PRIMARY KEY (`IdLivro`);
+  ADD PRIMARY KEY (`IdLivro`),
+  ADD KEY `FK_ConstraintName3` (`IdAutor`);
 
 --
 -- Índices de tabela `usuario`
@@ -146,7 +151,7 @@ ALTER TABLE `usuario`
 -- AUTO_INCREMENT de tabela `autor`
 --
 ALTER TABLE `autor`
-  MODIFY `IdAutor` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `IdAutor` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de tabela `categoria`
@@ -170,13 +175,37 @@ ALTER TABLE `emprestimo`
 -- AUTO_INCREMENT de tabela `livro`
 --
 ALTER TABLE `livro`
-  MODIFY `IdLivro` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `IdLivro` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de tabela `usuario`
 --
 ALTER TABLE `usuario`
   MODIFY `IdUsuario` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Restrições para tabelas despejadas
+--
+
+--
+-- Restrições para tabelas `categorialivro`
+--
+ALTER TABLE `categorialivro`
+  ADD CONSTRAINT `FK_ConstraintName` FOREIGN KEY (`IdCategoria`) REFERENCES `categoria` (`IdCategoria`),
+  ADD CONSTRAINT `FK_ConstraintName2` FOREIGN KEY (`IdLivro`) REFERENCES `livro` (`IdLivro`);
+
+--
+-- Restrições para tabelas `emprestimo`
+--
+ALTER TABLE `emprestimo`
+  ADD CONSTRAINT `FK_ConstraintName4` FOREIGN KEY (`IdUsuario`) REFERENCES `usuario` (`IdUsuario`),
+  ADD CONSTRAINT `FK_ConstraintName5` FOREIGN KEY (`IdLivro`) REFERENCES `livro` (`IdLivro`);
+
+--
+-- Restrições para tabelas `livro`
+--
+ALTER TABLE `livro`
+  ADD CONSTRAINT `FK_ConstraintName3` FOREIGN KEY (`IdAutor`) REFERENCES `autor` (`IdAutor`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
