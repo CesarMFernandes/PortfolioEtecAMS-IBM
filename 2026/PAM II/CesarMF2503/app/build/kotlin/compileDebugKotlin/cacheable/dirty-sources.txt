@@ -1,0 +1,4 @@
+C:\Users\Admin\AndroidStudioProjects\CesarMF2503\app\src\main\java\com\example\cesarmf2503\ui\theme\Type.kt
+C:\Users\Admin\AndroidStudioProjects\CesarMF2503\app\src\main\java\com\example\cesarmf2503\ui\theme\Theme.kt
+C:\Users\Admin\AndroidStudioProjects\CesarMF2503\app\src\main\java\com\example\cesarmf2503\ui\theme\Color.kt
+C:\Users\Admin\AndroidStudioProjects\CesarMF2503\app\src\main\java\com\example\cesarmf2503\MainActivity.kt
