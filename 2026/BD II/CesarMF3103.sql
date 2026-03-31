@@ -15,6 +15,11 @@ create table barbeiros(
     cpf varchar(11) unique not null
 );
 
+create table categorias(
+	idCategoria int primary key auto_increment,
+    nome varchar(20) not null
+);
+
 create table servicos(
 	idServico int primary key auto_increment,
     nome varchar(30) not null,
@@ -22,11 +27,6 @@ create table servicos(
     categoria int not null,
     
     FOREIGN KEY (categoria) REFERENCES categorias(idCategoria)
-);
-
-create table categorias(
-	idCategoria int primary key auto_increment,
-    nome varchar(20) not null
 );
 
 create table agendamentos(
@@ -57,3 +57,37 @@ create table barbeiros_agendamentos(
     FOREIGN KEY (idBarbeiro) REFERENCES barbeiros(idBarbeiro),
     FOREIGN KEY (idAgendamento) REFERENCES agendamentos(idAgendamento)
 );
+
+insert into clientes
+values(null, "Cliente Teste", "+5511968290174", "clienteteste@barber.com", default);
+select * from clientes;
+
+insert into barbeiros
+values(null, "Barbeiro Teste", "38796048619");
+select * from barbeiros;
+
+insert into categorias
+values(null, "Categoria Teste");
+insert into categorias
+values(null, "Categoria Teste 2");
+select * from categorias;
+
+insert into servicos
+values(null, "Serviço Teste", 39.99, 1);
+insert into servicos
+values(null, "Serviço Teste 2", 59.99, 2);
+select * from servicos;
+
+insert into agendamentos
+values(null, 1, "2026-4-20 16:00:00", 80.00);
+select * from agendamentos;
+
+insert into servicos_agendamentos
+values(null, 1, 1);
+insert into servicos_agendamentos
+values(null, 2, 1);
+select * from servicos_agendamentos;
+
+insert into barbeiros_agendamentos
+values(null, 1, 1);
+select * from barbeiros_agendamentos;
