@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +64,7 @@ private fun App(){
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ){
-            val image = painterResource(R.drawable.ic_launcher_foreground)
+            val image = painterResource(R.drawable.stardewvalleylogo)
             Image(
                 painter = image,
                 contentDescription = null,
@@ -85,28 +86,28 @@ private fun App(){
             }
             ActionButton(
                 text = "I",
-                buttonColors = ErrorButtonColors(),
+                buttonColors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth(0.5f)
             ) {
                 Log.e(TAG, "App: $nome Nota I")
             }
             ActionButton(
                 text = "R",
-                buttonColors = WarningButtonColors(),
+                buttonColors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth(0.5f)
             ) {
                 Log.w(TAG, "App: $nome Nota R")
             }
             ActionButton(
                 text = "B",
-                buttonColors = DebugButtonColors(),
+                buttonColors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier.fillMaxWidth(0.5f)
             ) {
                 Log.d(TAG, "App: $nome Nota B")
             }
             ActionButton(
                 text = "MB",
-                buttonColors = InfoButtonColors(),
+                buttonColors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                 modifier = Modifier.fillMaxWidth(0.5f)
             ) {
                 Log.i(TAG, "App: $nome Nota MB")
@@ -136,7 +137,7 @@ fun ActionButton(
 @Composable
 fun Greeting(x0: String) {
     Text(
-        text = "ATIVIDADE DE $name",
+        text = "ATIVIDADE DE PAM 2",
         style = MaterialTheme.typography.bodyLarge.copy(
             fontWeight = FontWeight.Bold
         ),
