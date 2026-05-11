@@ -91,3 +91,5 @@ select * from filmes where classificacao in('L', '10', '12');
 select titulo from filmes where id_filme in(select id_filme from acessos);
 select * from filmes where id_filme not in(select id_filme from acessos);
 select * from acessos where usuario in('Ana Oliveira', 'Ricardo Santos');
+
+drop database streaming_db;
