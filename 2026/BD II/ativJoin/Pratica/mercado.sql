@@ -76,4 +76,26 @@ INSERT INTO itens_pedidos (id_pedido, id_produto, quantidade) VALUES
 (510, 102, 2), (511, 105, 1);
 
 select pedidos.id, clientes.nome_cliente, vendedores.nome_vendedor, produtos.descricao, itens_pedidos.quantidade
+from pedidos
+inner join clientes on pedidos.id_cliente = clientes.id
+inner join vendedores on pedidos.id_vendedor = vendedores.id
+inner join itens_pedidos on pedidos.id = itens_pedidos.id_pedido
+inner join produtos on itens_pedidos.id_produto = produtos.id;
 
+select produtos.*, sum(itens_pedidos.quantidade) as quantidade
+from produtos
+inner join itens_pedidos on produtos.id = itens_pedidos.id_produto
+group by produtos.id;
+
+select vendedores.*, sum(itens_pedidos.quantidade * produtos.valor_unitario) as valor_vendido 
+from vendedores
+left join pedidos on vendedores.id = pedidos.id_vendedor
+left join itens_pedidos on pedidos.id = itens_pedidos.id_pedido
+left join produtos on itens_pedidos.id_produto = produtos.id
+where pedidos.id is not null
+group by vendedores.id;
+
+select clientes.*, pedidos.id
+from pedidos
+right join clientes on pedidos.id_cliente = clientes.id
+where pedidos.id is null;
