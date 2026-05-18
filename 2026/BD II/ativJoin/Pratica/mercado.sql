@@ -99,3 +99,9 @@ select clientes.*, pedidos.id
 from pedidos
 right join clientes on pedidos.id_cliente = clientes.id
 where pedidos.id is null;
+
+select a.nome_cliente as cliente_A, b.nome_cliente as cliente_B, a.cidade, a.uf
+from clientes as a
+inner join clientes as b 
+on a.cidade = b.cidade
+and a.id < b.id;
