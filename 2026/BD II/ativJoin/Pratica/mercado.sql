@@ -95,7 +95,7 @@ left join produtos on itens_pedidos.id_produto = produtos.id
 where pedidos.id is not null
 group by vendedores.id;
 
-select clientes.*, pedidos.id
+select clientes.*, pedidos.id as pedidos
 from pedidos
 right join clientes on pedidos.id_cliente = clientes.id
 where pedidos.id is null;
@@ -105,3 +105,5 @@ from clientes as a
 inner join clientes as b 
 on a.cidade = b.cidade
 and a.id < b.id;
+
+drop database mercado;
