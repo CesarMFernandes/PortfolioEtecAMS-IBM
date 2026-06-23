@@ -1,29 +1,19 @@
 use streamflow;
 
 /*Ver dados da sua conta*/
-select * from assinantes where id = 1;
+call informacoes_assinantes(1);
 
 /*Criar conta*/
-insert into assinantes(nome, cpf, email, data_nascimento, uf)
-values("Fulano da Silva", "12312312312", "silva.fulano@gmail.com", "2001-02-23", "SP");
+call criar_assinantes("Fulano da Silva", "12312312312", "silva.fulano@gmail.com", "2001-02-23", "SP");
 
 /*Inserir saldo*/
-update assinantes set saldo = saldo + 10 where id = 1;
+call inserir_saldo(1, 10.00);
 
 /*Renovar assinatura / Cobrança de assinatura*/
-update assinantes set 
-assinatura_ativa = if(saldo>=10, 1, 0),
-saldo = if(saldo>=10, saldo-10, saldo)
-where id = 1;
+call assinatura(1);
 
 /*Atualizar dados*/
-update assinantes set 
-nome = "Ciclano de Souza",
-cpf = "45645645645",
-email = "souza.ciclano@outlook.net",
-data_nascimento = "1994-11-09",
-uf = "RJ"
-where id = 1;
+call atualizar_dados_assinantes(1, "Ciclano de Souza", "45645645645", "souza.ciclano@outlook.net", "1994-11-09", "RJ");
 
 
 

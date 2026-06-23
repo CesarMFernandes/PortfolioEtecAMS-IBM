@@ -26,6 +26,13 @@ create table perfis(
     foreign key (assinante_id) references assinantes(id) on delete restrict on update cascade /*Os dados devem sempre ser preservados com on delete restrict, usa-se on update cascade para poder rastrear a conta correta mesmo com a autalização de id*/
 );
 
+create table preferencias(
+	id int primary key auto_increment,
+    perfil_id int not null,
+    preferencia enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário") not null,
+    foreign key (perfil_id) references perfis(id) 
+);
+
 create table videos(
 	id int primary key auto_increment,
     titulo varchar(50) not null,
@@ -75,6 +82,20 @@ create table videosprodutoras(
     primary key(video_id, produtora_id)
 );
 
+create table generofilmes(
+	id int primary key auto_increment,
+    filme_id int not null,
+    genero enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário") not null,
+    foreign key (filme_id) references filmes(id) 
+);
+
+create table generoseries(
+	id int primary key auto_increment,
+    serie_id int not null,
+    genero enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário") not null,
+    foreign key (serie_id) references series(id) 
+);
+
 /*O histórico imutável de logs. Nessa tabela vai ser usado on delete restrict e nenhum usuário além do root poderá deletar ou alterar essa tabela*/
 create table reproducoes( 
 	id int primary key auto_increment,
@@ -88,6 +109,74 @@ create table reproducoes(
     foreign key (perfil_id) references perfis(id) on delete restrict on update cascade, 
     foreign key (video_id) references videos(id) on delete restrict on update cascade /*Usa-se on delete restrict pois o histórico deve ser imutável, porém usa-se on update cascade para não ter chance de confundir as produtoras quando calcular o pagamento*/
 );
+
+-- Views, procedures e indices para usuários
+delimiter //
+create procedure informacoes_assinantes(in id_dado int)
+begin
+	select * from assinantes where id = id_dado;
+end//
+delimiter ;
+
+delimiter //
+create procedure criar_assinantes(
+	in nome_dado varchar(50), 
+	in cpf_dado varchar(11), 
+	in email_dado varchar(100), 
+	in data_nascimento_dado date, 
+	in uf_dado char(2)
+)
+begin
+	insert into assinantes(nome, cpf, email, data_nascimento, uf)
+	values(nome_dado, cpf_dado, email_dado, data_nascimento_dado, uf_dado);
+end//
+delimiter ;
+
+delimiter //
+create procedure inserir_saldo(
+	in id_dado int, 
+	in saldo_dado decimal(10, 2)
+)
+begin
+	update assinantes set saldo = saldo + saldo_dado where id = id_dado;
+end//
+delimiter ;
+
+delimiter //
+create procedure assinatura(
+	in id_dado int
+)
+begin
+	update assinantes set 
+	assinatura_ativa = if(saldo>=10, 1, 0),
+	saldo = if(saldo>=10, saldo-10, saldo)
+	where id = id_dado;
+end//
+delimiter ;
+
+delimiter //
+create procedure atualizar_dados_assinantes(
+	in id_dado int,
+	in nome_dado varchar(50), 
+	in cpf_dado varchar(11), 
+	in email_dado varchar(100), 
+	in data_nascimento_dado date, 
+	in uf_dado char(2)
+)
+begin
+	update assinantes set 
+	nome = nome_dado,
+	cpf = cpf_dado,
+	email = email_dado,
+	data_nascimento = data_nascimento_dado,
+	uf = uf_dado
+where id = id_dado;
+end//
+delimiter ;
+
+
+
+
 
 /*Views para a auditoria*/
 CREATE OR REPLACE VIEW cobranca_estudios AS 
@@ -109,10 +198,7 @@ group by UF, Dispositivo;
 
 create or replace view metricas_engajamento_LGPD as
 SELECT 
-    assinantes.id, 
     SUBSTRING_INDEX(assinantes.nome, ' ', 1) AS Primeiro_Nome,
-    CONCAT('*********',right(assinantes.cpf,2)) AS cpf,
-    CONCAT(LEFT(assinantes.email, 1), '***@', SUBSTRING_INDEX(assinantes.email, '@', -1)) AS Email,
     TIMESTAMPDIFF(YEAR, assinantes.data_nascimento, CURDATE()) AS Idade,
     count(reproducoes.id) as Quantidade_de_Visualizações,
     sum(reproducoes.tempo_assistido_segundos) as Tempo_Assistindo,
