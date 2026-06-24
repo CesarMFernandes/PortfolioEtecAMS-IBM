@@ -1,61 +1,67 @@
 use streamflow;
 
-/*Listagens produtoras*/
-select * from produtoras;
-select * from videos;
-select * from videosprodutoras;
-select * from filmes;
-select * from series;
-select * from temporadas;
-select * from episodios;
+/*Listar filmes por nome*/
+call filmes_por_nome("Backrooms"); -- título
+
+/*Listar séries por nome*/
+call series_por_nome("Jojo"); -- título
+
+/*Listar produtoras por nome*/
+call produtoras_por_nome("Amazon"); -- nome da produtora
+
+/*Ver episódios e filmes feitos por uma produtora*/
+call videos_de_produtoras(1); -- id da produtora
+
+/*Listar generos de um filme*/
+call listar_generos_filmes(1); -- id do filme
+
+/*Listar generos de uma série*/
+call listar_generos_series(1); -- id da série
+
+/*Listar temporadas e episódios de uma série*/
+call listar_episodios(1); -- id da série
+
+/*Listar produtoras de um vídeo*/
+call listar_produtoras_videos(1); -- id da produtora
+
+
 
 /*Sequencia de inserts para colocar um filme no ar*/
-insert into videos(titulo, duracao_segundos)
-values("Rango", 6420);
-insert into videosprodutoras(video_id, produtora_id)
-values(1, 1);
-insert into filmes(video_id)
-values(1);
+call adicionar_filmes("Devoradores de Estrelas", 9360);
+call adicionar_filmes("Backrooms, Um Não-Lugar", 6600);
 
-insert into videos(titulo, duracao_segundos)
-values("Devoradores de Estrela", 9360);
-insert into videosprodutoras(video_id, produtora_id)
-values(2, 2);
-insert into videosprodutoras(video_id, produtora_id)
-values(2, 3);
-insert into filmes(video_id)
-values(2);
+/*Colocar gêneros de um filme*/
+call colocar_generos_filmes(1, "Ficção Científica");
+call colocar_generos_filmes(1, "Drama");
+call colocar_generos_filmes(2, "Terror");
 
 /*Adicionar uma série*/
-insert into series(titulo)
-values("JoJo no Kimyou na Bouken");
+call adicionar_series("JoJo no Kimyou na Bouken");
+
+/*Colocar gêneros de uma série*/
+call colocar_generos_series(1, "Ação");
+call colocar_generos_series(1, "Comédia");
 
 /*Adicionar temporadas*/
-insert into temporadas(titulo, numero, serie_id)
-values
-("Phantom Blood / Battle Tendency", 1, 1),
-("Stardust Crusaders", 2, 1);
+call adicionar_temporadas("Phantom Blood / Battle Tendency", 1, 1);
+call adicionar_temporadas("Stardust Crusaders", 2, 1);
 
 /*Adicionar Episodios*/
-insert into videos(titulo, duracao_segundos)
-values
-("Dio, o Invasor", 1440), ("Uma Carta do Passado", 1440),
-("O Homem Possuído por um Espírito Maligno", 1440), ("Quem Será o Juiz?", 1440);
-insert into videosprodutoras(video_id, produtora_id)
-values
-(3, 4), (4, 4),
-(5, 4), (6, 4);
-insert into episodios(numero, video_id, temporada_id)
-values
-(1, 3, 1), (2, 4, 1),
-(1, 5, 2), (2, 6, 2);
+call adicionar_episodios("Dio, o Invasor", 1440, 1, 1);
+call adicionar_episodios("Uma Carta do Passado", 1440, 2, 1);
+call adicionar_episodios("O Homem Possuído por um Espírito Maligno", 1440, 1, 2);
+call adicionar_episodios("Quem Será o Juiz?", 1440, 2, 2);
 
-/*Desativar um vídeo*/
-update videos set
-ativo = 0
-where id = 5;
+/*Colocar produtora(s) de um vídeo*/
+call colocar_produtoras(1, 1);
+call colocar_produtoras(1, 2);
 
-/*Ativar um vídeo*/
-update videos set
-ativo = 1
-where id = 5;
+call colocar_produtoras(2, 3);
+
+call colocar_produtoras(3, 4);
+call colocar_produtoras(4, 4);
+call colocar_produtoras(5, 4);
+call colocar_produtoras(6, 4);
+
+/*Desativar / Ativar um vídeo*/
+call status_videos(1);

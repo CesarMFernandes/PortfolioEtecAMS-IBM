@@ -1,101 +1,78 @@
 use streamflow;
 
 /*Ver dados da sua conta*/
-call informacoes_assinantes(1);
+call informacoes_assinantes(1); -- id do assinante
 
 /*Criar conta*/
-call criar_assinantes("Fulano da Silva", "12312312312", "silva.fulano@gmail.com", "2001-02-23", "SP");
+call criar_assinantes("Fulano da Silva", "12312312312", "silva.fulano@gmail.com", "2001-02-23", "SP"); -- nome, cpf, email, data de nascimento, UF
 
 /*Inserir saldo*/
-call inserir_saldo(1, 10.00);
+call inserir_saldo(1, 10.00); -- id do assinante, saldo a ser acrescentado
 
 /*Renovar assinatura / Cobrança de assinatura*/
-call assinatura(1);
+call assinatura(1); -- id do assinante
 
 /*Atualizar dados*/
-call atualizar_dados_assinantes(1, "Ciclano de Souza", "45645645645", "souza.ciclano@outlook.net", "1994-11-09", "RJ");
+call atualizar_dados_assinantes(1, "Ciclano de Souza", "45645645645", "souza.ciclano@outlook.net", "1994-11-09", "RJ"); -- id do assinante, nome, cpf, email, data de nascimento, UF
 
 
 
 /*Ver perfis da sua conta*/
-select * from perfis where assinante_id = 1 and ativo = 1;
+call listar_perfis(1); -- id do assinante
 
 /*Criar perfil*/
-insert into perfis (nome_exibicao, assinante_id)
-select "amigo", 1
-where (SELECT count(*) FROM perfis WHERE assinante_id = 1 and ativo = 1) <= 4 and 
-(select count(*) from perfis where assinante_id = 1 and nome_exibicao like "amigo" and ativo = 1) = 0; /*apenas faz o insert caso não tenha 5 perfis ou mais e caso não tenha nome duplicado*/
+call criar_perfis(1, "filho"); -- id do assinante, nome do perfil
 
 /*Atualizar nome de perfil*/
-update perfis set
-nome_exibicao = if((select count(*) from perfis where assinante_id = 1 and nome_exibicao like "amigo" and ativo = 1) = 0, "amigo", nome_exibicao) /*apenas atualiza caso não gere nome duplicado*/
-where id = 1;
+call atualizar_perfis(1, "pai"); -- id do perfil, nome do perfil
+
+/*Adicionar preferência ao perfil*/
+call registrar_preferencias(1, "Ação"); -- id do perfil, preferência
+call registrar_preferencias(1, "Terror");
 
 /*Desativar perfil*/
-update perfis set 
-ativo = 0
-where id = 1;
+call desativar_perfis(1); -- id do perfil
 
 
 
-/*Listar catálogo de filmes*/
-select videos.titulo as Título, sec_to_time(duracao_segundos) as Duracao_do_Filme
-from filmes
-inner join videos on filmes.video_id = videos.id
-where videos.ativo = 1;
+/*Listar filmes por nome*/
+call filmes_por_nome("Backrooms"); -- título
 
-/*Listar produtoras de um filme*/
-select videos.titulo as Título, produtoras.nome as Produtora_do_filme
-from filmes
-inner join videos on filmes.video_id = videos.id
-inner join videosprodutoras on videos.id = videosprodutoras.video_id
-inner join produtoras on videosprodutoras.produtora_id = produtoras.id
-where filmes.id = 2;
+/*Listar séries por nome*/
+call series_por_nome("Jojo"); -- título
+
+/*Listar produtoras por nome*/
+call produtoras_por_nome("Amazon"); -- nome da produtora
+
+/*Ver episódios e filmes feitos por uma produtora*/
+call videos_de_produtoras(1); -- id da produtora
+
+/*Listar catálogo de filmes baseado nas preferências do perfil*/
+call listar_filmes(1); -- id do perfil
+
+/*Listar generos de um filme*/
+call listar_generos_filmes(1); -- id do filme
 
 /*Listar catálogo de séries*/
-select series.titulo as Título, count(distinct temporadas.id) as Quantidade_de_Temporadas, count(episodios.id) as Quantidade_de_Episódios
-from series
-inner join temporadas on series.id = temporadas.serie_id
-inner join episodios on temporadas.id = episodios.temporada_id
-inner join videos on episodios.video_id = videos.id where videos.ativo = 1
-having count(episodios.id) >= 1;
+call listar_series(1); -- id do perfil
+
+/*Listar generos de uma série*/
+call listar_generos_series(1); -- id da série
 
 /*Listar temporadas e episódios de uma série*/
-select series.titulo as Série, temporadas.titulo as Título_da_Temporada, temporadas.numero as Número_da_temporada, videos.titulo as Título_do_Episódio, episodios.numero as Número_do_Episódio, sec_to_time(duracao_segundos) as Duração
-from series
-inner join temporadas on series.id = temporadas.serie_id
-inner join episodios on temporadas.id = episodios.temporada_id
-inner join videos on episodios.video_id = videos.id
-where videos.ativo = 1
-order by Número_da_Temporada, Número_do_Episódio;
+call listar_episodios(1); -- id da série
 
-/*Listar produtoras de um episódio*/
-select videos.titulo as Título, produtoras.nome as Produtora_do_Episódio
-from episodios
-inner join videos on episodios.video_id = videos.id
-inner join videosprodutoras on videos.id = videosprodutoras.video_id
-inner join produtoras on videosprodutoras.produtora_id = produtoras.id
-where episodios.id = 2;
+/*Listar produtoras de um vídeo*/
+call listar_produtoras_videos(1); -- id do vídeo
 
 /*Criação de relatório ao clicar em play*/
-insert into reproducoes(ip, dispositivo, perfil_id, video_id)
-values("123.12.123.12", "Web", 1, 2);
+call criar_relatorios("123.12.123.12", "Web", 1, 2); -- ip, dispositivo, id perfil, id vídeo
 
 /*Marca todos os registros como concluído de um vídeo e perfil caso o perfil tenha terminado o vídeo*/
-update reproducoes set
-concluido = 1
-where perfil_id = 1 and video_id = 4;
+call marcar_concluido(1, 2); -- id perfil, id vídeo
 
 /*Atualiza o tempo assistido de um relatório específico após o fim da sessão*/
-update reproducoes set
-tempo_assistido_segundos = 10000
-where id = 7;
+call atualizar_tempo_sessao(1, 10000); -- id relatório, duração da sessão
 
 /*Painel de Tela Inicial (Continuar Assistindo)*/
-select videos.titulo as Vídeo, reproducoes.data_hora_inicio as Última_Visualização
-from reproducoes
-inner join videos on reproducoes.video_id = videos.id
-inner join perfis on reproducoes.perfil_id = perfis.id
-where perfis.id = 1 and reproducoes.concluido = 0 and videos.ativo = 1
-group by videos.id
-order by Última_Visualização desc;
+call painel_continuar_assistindo(1); -- id do perfil
