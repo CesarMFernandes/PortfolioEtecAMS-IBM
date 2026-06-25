@@ -223,6 +223,24 @@ end//
 delimiter ;
 
 delimiter //
+create procedure listar_preferencias(
+	in id_dado int
+)
+begin
+	select * from preferencias where perfil_id = id_dado;
+end//
+delimiter ;
+
+delimiter //
+create procedure remover_preferencias(
+	in id_dado int
+)
+begin
+	delete from preferencias where id = id_dado;
+end//
+delimiter ;
+
+delimiter //
 create procedure desativar_perfis(
 	in id_dado int
 )
@@ -238,7 +256,7 @@ create procedure listar_filmes(
 	in id_dado int
 )
 begin
-	select videos.titulo as Título, sec_to_time(duracao_segundos) as Duracao_do_Filme
+	select videos.id as Id_do_Vídeo, filmes.id as Id_do_Filme, videos.titulo as Título, sec_to_time(duracao_segundos) as Duracao_do_Filme
 	from filmes
 	inner join videos on filmes.video_id = videos.id
 	inner join generofilmes on filmes.id = generofilmes.filme_id
@@ -251,7 +269,7 @@ create procedure listar_series(
 	in id_dado int
 )
 begin
-	select series.titulo as Título, count(distinct temporadas.id) as Quantidade_de_Temporadas, count(episodios.id) as Quantidade_de_Episódios
+	select series.id as Id_da_Serie, series.titulo as Título, count(distinct temporadas.id) as Quantidade_de_Temporadas, count(episodios.id) as Quantidade_de_Episódios
 	from series
 	inner join generoseries on series.id = generoseries.serie_id
 	inner join temporadas on series.id = temporadas.serie_id
@@ -272,6 +290,8 @@ create procedure criar_relatorios(
 begin
 	insert into reproducoes(ip, dispositivo, perfil_id, video_id)
 	values(ip_dado, dispositivo_dado, perfil_id_dado, video_id_dado);
+    
+    select id from reproducoes where id = last_insert_id();
 end//
 delimiter ;
 
@@ -398,7 +418,7 @@ create procedure adicionar_episodios(
     in titulo_dado varchar(50),
     in duracao_dada int,
     in numero_dado int,
-    in temporada_dada int
+    in id_temporada_dada int
 )
 begin
 	insert into videos(titulo, duracao_segundos)
@@ -407,7 +427,7 @@ begin
     
 	insert into episodios(numero, video_id, temporada_id)
 	values
-	(numero_dado, LAST_INSERT_ID(), temporada_dada);
+	(numero_dado, LAST_INSERT_ID(), id_temporada_dada);
 end//
 delimiter ;
 
@@ -442,15 +462,16 @@ group by UF, Dispositivo;
 
 create or replace view metricas_engajamento_LGPD as
 SELECT 
-	CONCAT('Usuário #', assinantes.id) AS Nome_Mascarado,
+	CONCAT(assinantes.id) AS Id_do_Usuário,
     TIMESTAMPDIFF(YEAR, assinantes.data_nascimento, CURDATE()) AS Idade,
-    count(reproducoes.id) as Quantidade_de_Visualizações,
-    sum(reproducoes.tempo_assistido_segundos) as Tempo_Assistindo,
-    count(reproducoes.id) as Número_de_Acessos
+    sec_to_time(sum(reproducoes.tempo_assistido_segundos)) as Tempo_Assistindo,
+    count(reproducoes.id) as Número_de_Acessos,
+    preferencias.preferencia as Preferências
 FROM assinantes
 inner join perfis on assinantes.id = perfis.assinante_id
 inner join reproducoes on perfis.id = reproducoes.perfil_id
-group by assinantes.id
+inner join preferencias on perfis.id = preferencias.perfil_id
+group by preferencias.id
 order by sum(reproducoes.tempo_assistido_segundos) desc;
 
 CREATE INDEX idx_reproducoes_video_data ON reproducoes(video_id, data_hora_inicio);
@@ -464,7 +485,7 @@ create procedure filmes_por_nome(
     in titulo_dado varchar(50)
 )
 begin
-	select videos.titulo as Título, videos.duracao_segundos as Duração_do_Filme
+	select videos.id as Id_do_Vídeo, filmes.id as Id_do_Filme, videos.titulo as Título, videos.duracao_segundos as Duração_do_Filme
     from filmes 
     inner join videos on filmes.video_id = videos.id
     where videos.titulo like concat('%',titulo_dado,'%') and videos.ativo = 1;
@@ -476,7 +497,7 @@ create procedure series_por_nome(
     in titulo_dado varchar(50)
 )
 begin
-	select series.titulo as Título, count(distinct temporadas.id) as Quantidade_de_Temporadas, count(episodios.id) as Quantidade_de_Episódios
+	select series.id as Id_da_Série, series.titulo as Título, count(distinct temporadas.id) as Quantidade_de_Temporadas, count(episodios.id) as Quantidade_de_Episódios
 	from series
 	inner join temporadas on series.id = temporadas.serie_id
 	inner join episodios on temporadas.id = episodios.temporada_id
@@ -501,11 +522,11 @@ create procedure videos_de_produtoras(
     in id_dado int
 )
 begin
-	select videos.titulo as Título, produtoras.nome as Nome_da_Produtora
+	select videos.id as Id_do_Vídeo, videos.titulo as Título, produtoras.nome as Nome_da_Produtora
     from videosprodutoras
     inner join videos on videosprodutoras.video_id = videos.id
     inner join produtoras on videosprodutoras.produtora_id = produtoras.id
-    where produtoras.id = id_dado;
+    where videos.ativo = 1 and produtoras.id = id_dado;
 end//
 delimiter ;
 
@@ -514,7 +535,7 @@ create procedure listar_generos_filmes(
 	in id_dado int
 )
 begin
-	select videos.titulo as Título, generofilmes.genero as Gênero
+	select videos.id as Id_do_Vídeo, filmes.id as Id_do_Filme, videos.titulo as Título, generofilmes.genero as Gênero
 	from filmes
 	inner join videos on filmes.video_id = videos.id
 	inner join generofilmes on filmes.id = generofilmes.filme_id
@@ -527,7 +548,7 @@ create procedure listar_produtoras_videos(
 	in id_dado int
 )
 begin
-	select videos.titulo as Título, produtoras.nome as Produtora_do_Vídeo
+	select videos.id as Id_do_Vídeo, videos.titulo as Título, produtoras.nome as Produtora_do_Vídeo
 	from videos
 	inner join videosprodutoras on videos.id = videosprodutoras.video_id
 	inner join produtoras on videosprodutoras.produtora_id = produtoras.id
@@ -536,16 +557,32 @@ end//
 delimiter ;
 
 delimiter //
-create procedure listar_episodios(
+create procedure listar_temporadas(
 	in id_dado int
 )
 begin
-	select series.titulo as Série, temporadas.titulo as Título_da_Temporada, temporadas.numero as Número_da_temporada, videos.titulo as Título_do_Episódio, episodios.numero as Número_do_Episódio, sec_to_time(duracao_segundos) as Duração
+	select series.id as Id_da_Série, series.titulo as Série, temporadas.id as Id_da_Temporada,temporadas.titulo as Título_da_Temporada, temporadas.numero as Número_da_temporada, count(episodios.id) as Número_de_Episódios
 	from series
 	inner join temporadas on series.id = temporadas.serie_id
 	inner join episodios on temporadas.id = episodios.temporada_id
 	inner join videos on episodios.video_id = videos.id
 	where videos.ativo = 1 and series.id = id_dado
+    group by temporadas.id
+	order by Número_da_Temporada;
+end//
+delimiter ;
+
+delimiter //
+create procedure listar_episodios(
+	in id_dado int
+)
+begin
+	select series.id as Id_da_Série, series.titulo as Série, temporadas.titulo as Título_da_Temporada, temporadas.numero as Número_da_temporada, videos.id as Id_do_Vídeo, videos.titulo as Título_do_Episódio, episodios.numero as Número_do_Episódio, sec_to_time(duracao_segundos) as Duração
+	from series
+	inner join temporadas on series.id = temporadas.serie_id
+	inner join episodios on temporadas.id = episodios.temporada_id
+	inner join videos on episodios.video_id = videos.id
+	where videos.ativo = 1 and temporadas.id = id_dado
 	order by Número_da_Temporada, Número_do_Episódio;
 end//
 delimiter ;
@@ -580,6 +617,8 @@ grant execute on procedure streamflow.listar_perfis to 'app_streamflow'@'localho
 grant execute on procedure streamflow.criar_perfis to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.atualizar_perfis to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.registrar_preferencias to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.listar_preferencias to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.remover_preferencias to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.desativar_perfis to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_filmes to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_series to 'app_streamflow'@'localhost';
@@ -596,6 +635,7 @@ grant execute on procedure streamflow.listar_generos_filmes to 'app_streamflow'@
 grant execute on procedure streamflow.listar_generos_series to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_episodios to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_produtoras_videos to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.listar_temporadas to 'app_streamflow'@'localhost';
 
 /*Sistema usado pelos auditores (equipe de marketing e analistas)*/
 create user 'auditor_streamflow'@'localhost' identified by 'SenhaAuditor#123';
@@ -612,6 +652,7 @@ grant execute on procedure streamflow.listar_generos_filmes to 'auditor_streamfl
 grant execute on procedure streamflow.listar_generos_series to 'auditor_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_episodios to 'auditor_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_produtoras_videos to 'auditor_streamflow'@'localhost';
+grant execute on procedure streamflow.listar_temporadas to 'auditor_streamflow'@'localhost';
 
 /*Sistema usado pelas produtoras para lançar filmes e séries*/
 create user 'produtora_streamflow'@'localhost' identified by 'SenhaProdutora#123';
@@ -633,6 +674,7 @@ grant execute on procedure streamflow.listar_generos_filmes to 'produtora_stream
 grant execute on procedure streamflow.listar_generos_series to 'produtora_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_episodios to 'produtora_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_produtoras_videos to 'produtora_streamflow'@'localhost';
+grant execute on procedure streamflow.listar_temporadas to 'produtora_streamflow'@'localhost';
 
 insert into produtoras(nome, pais)
 values

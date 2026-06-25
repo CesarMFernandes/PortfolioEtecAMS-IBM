@@ -27,6 +27,9 @@ call listar_generos_filmes(1); -- id do filme
 /*Listar generos de uma série*/
 call listar_generos_series(1); -- id da série
 
+/*Listar temporadas de uma série*/
+call listar_temporadas(1); -- id da série
+
 /*Listar temporadas e episódios de uma série*/
 call listar_episodios(1); -- id da série
 

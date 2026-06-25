@@ -30,6 +30,12 @@ call atualizar_perfis(1, "pai"); -- id do perfil, nome do perfil
 call registrar_preferencias(1, "Ação"); -- id do perfil, preferência
 call registrar_preferencias(1, "Terror");
 
+/*Listar preferências do perfil*/
+call listar_preferencias(1); -- id do perfil
+
+/*Remover preferências do perfil*/
+call remover_preferencias(1); -- id da preferência
+
 /*Desativar perfil*/
 call desativar_perfis(1); -- id do perfil
 
@@ -58,6 +64,9 @@ call listar_series(1); -- id do perfil
 
 /*Listar generos de uma série*/
 call listar_generos_series(1); -- id da série
+
+/*Listar temporadas de uma série*/
+call listar_temporadas(1); -- id da série
 
 /*Listar temporadas e episódios de uma série*/
 call listar_episodios(1); -- id da série
