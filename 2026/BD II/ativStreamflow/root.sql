@@ -207,18 +207,6 @@ END //
 
 DELIMITER ;
 
-DELIMITER //
-
-DECLARE EXIT HANDLER FOR SQLEXCEPTION
-BEGIN
-    ROLLBACK;
-    SIGNAL SQLSTATE '45000'
-    SET MESSAGE_TEXT = 'Erro ao registrar reprodução';
-END;
-
-DELIMITER ;
-
-
 
 
 -- Procedures e indices para usuários
@@ -506,6 +494,13 @@ create procedure registrar_reproducao(
     in video_id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar reprodução';
+	END;
+	
 	start transaction;
 	insert into reproducoes(ip, dispositivo, perfil_id, video_id)
 	values(ip_dado, dispositivo_dado, perfil_id_dado, video_id_dado);
@@ -691,7 +686,7 @@ begin
 end//
 delimiter ;
 
-/*Views e indices para a auditoria*/
+/*Procedures, functions, cursors, views e indices para a auditoria*/
 CREATE OR REPLACE VIEW cobranca_estudios AS 
 select produtoras.nome as Produtora, sum(reproducoes.tempo_assistido_segundos) / 60 as Tempo_Assistido_Minutos
 from produtoras
@@ -699,8 +694,80 @@ inner join videosprodutoras on produtoras.id = videosprodutoras.produtora_id
 inner join videos on videosprodutoras.video_id = videos.id
 inner join reproducoes on videos.id = reproducoes.video_id 
 where reproducoes.data_hora_inicio >= DATE_FORMAT(current_timestamp(), '%Y-%m-01 00:00:00')
-group by produtoras.id
-having Tempo_Assistido_Minutos / 60 > 5000;
+group by produtoras.id;
+
+DELIMITER //
+
+-- Faz select dos minutos consumidos de uma produtora especifica, em um intervalo de tempo especificado
+CREATE FUNCTION minutos_assistidos_por_produtora(
+    p_id_produtora INT,
+    p_competencia DATE
+)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+
+    DECLARE v_minutos DECIMAL(10,2);
+
+    SELECT COALESCE(SUM(r.tempo_assistido_segundos) / 60, 0)
+    INTO v_minutos
+    FROM produtoras
+    INNER JOIN videosprodutoras
+        ON produtoras.id = videosprodutoras.produtora_id
+    INNER JOIN videos 
+        ON videosprodutoras.video_id = videos.id
+    INNER JOIN reproducoes 
+        ON videos.id = reproducoes.video_id
+    WHERE produtoras.id = p_id_produtora
+      AND reproducoes.data_hora_inicio >= p_competencia
+      AND reproducoes.data_hora_inicio < DATE_ADD(p_competencia, INTERVAL 1 MONTH);
+
+    RETURN v_minutos;
+
+END //
+
+DELIMITER ;
+
+-- Usa um cursor para gerar registros de minutos assistindo, utilizando a function minutos_assistidos_por_produtora
+DELIMITER //
+
+CREATE PROCEDURE gerar_faturamento_mensal(
+    IN p_competencia DATE
+)
+BEGIN
+    DECLARE v_produtora_id INT;
+    DECLARE v_minutos DECIMAL(10,2);
+    DECLARE v_fim BOOLEAN DEFAULT FALSE;
+
+    DECLARE cursor_produtoras CURSOR FOR
+        SELECT id
+        FROM produtoras;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND
+        SET v_fim = TRUE;
+
+    OPEN cursor_produtoras;
+
+    loop_produtoras: LOOP
+
+        FETCH cursor_produtoras INTO v_produtora_id;
+
+        IF v_fim THEN
+            LEAVE loop_produtoras;
+        END IF;
+
+        SET v_minutos = minutos_assistidos_por_produtora(v_produtora_id, p_competencia);
+
+        INSERT INTO faturamento_produtoras (produtora_id, competencia, minutos_consumidos)
+        VALUES (v_produtora_id, p_competencia, v_minutos)
+        ON DUPLICATE KEY UPDATE minutos_consumidos = v_minutos;
+
+    END LOOP;
+
+    CLOSE cursor_produtoras;
+END //
+
+DELIMITER ;
 
 create or replace view trafego_regiao as
 select assinantes.uf as UF, reproducoes.dispositivo as Dispositivo, count(reproducoes.id) as Quantidade_de_Reproduções
@@ -712,16 +779,30 @@ group by UF, Dispositivo;
 create or replace view metricas_engajamento_LGPD as
 SELECT 
 	CONCAT(assinantes.id) AS Id_do_Usuário,
-    TIMESTAMPDIFF(YEAR, assinantes.data_nascimento, CURDATE()) AS Idade,
+    calcular_idade(assinantes.data_nascimento) AS Idade,
     sec_to_time(sum(reproducoes.tempo_assistido_segundos)) as Tempo_Assistindo,
     count(reproducoes.id) as Número_de_Acessos,
-    preferencias.preferencia as Preferências
+    group_concat(distinct preferencias.preferencia separator ', ') as Preferências
 FROM assinantes
 inner join perfis on assinantes.id = perfis.assinante_id
 inner join reproducoes on perfis.id = reproducoes.perfil_id
 inner join preferencias on perfis.id = preferencias.perfil_id
-group by preferencias.id
+group by assinantes.id, assinantes.data_nascimento
 order by sum(reproducoes.tempo_assistido_segundos) desc;
+
+DELIMITER //
+
+CREATE FUNCTION calcular_idade(
+    p_data_nascimento DATE
+)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    RETURN TIMESTAMPDIFF(YEAR, p_data_nascimento, CURDATE());
+END //
+
+DELIMITER ;
+
 
 CREATE INDEX idx_reproducoes_video_data ON reproducoes(video_id, data_hora_inicio);
 CREATE INDEX idx_reproducoes_perfil_dispositivo ON reproducoes(dispositivo);
