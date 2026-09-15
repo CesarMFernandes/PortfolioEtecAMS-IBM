@@ -14,7 +14,8 @@ create table assinantes(
     data_nascimento date not null,
     uf char(2) not null,
     saldo decimal(10, 2) not null default(0) check(saldo>=0), /*uso de decimal para prevenir erro de ponto flutuante, 0 por padrão pois o saldo é colocado depois da criação da conta, check para respeitar a regra de negócio*/
-    data_cadastro date not null default(current_timestamp())
+    data_cadastro date not null default(current_timestamp()),
+    data_ultima_alteracao date not null default(current_timestamp())
 );
 
 create table perfis(
@@ -129,7 +130,7 @@ create table auditoria_log(
     data_hora datetime not null default(current_timestamp())
 );
 
--- Triggers e Handlers
+-- Triggers
 DELIMITER //
 
 CREATE TRIGGER verificar_saldo
@@ -229,21 +230,65 @@ END //
 DELIMITER ;
 
 
+DELIMITER //
+
+CREATE TRIGGER auditoria_videos_insert
+AFTER INSERT ON videos
+FOR EACH ROW
+BEGIN
+    INSERT INTO auditoria_log (tabela, operacao, usuario, valor_antigo, valor_novo, data_hora)
+    VALUES ('videos', 'INSERT', USER(), NULL, NEW.titulo, CURRENT_TIMESTAMP());
+END //
+
+CREATE TRIGGER auditoria_videos_update
+AFTER UPDATE ON videos
+FOR EACH ROW
+BEGIN
+    IF OLD.titulo <> NEW.titulo THEN
+        INSERT INTO auditoria_log (tabela, operacao, usuario, valor_antigo, valor_novo, data_hora)
+        VALUES ('videos', 'UPDATE', USER(), OLD.titulo, NEW.titulo, CURRENT_TIMESTAMP());
+    END IF;
+END //
+
+DELIMITER ;
+
+
+DELIMITER //
+
+CREATE TRIGGER normalizar_nome_assinante
+BEFORE INSERT ON assinantes
+FOR EACH ROW
+BEGIN
+    SET NEW.nome = UPPER(TRIM(NEW.nome));
+END //
+
+CREATE TRIGGER atualizar_data_alteracao
+BEFORE UPDATE ON assinantes
+FOR EACH ROW
+BEGIN
+    SET NEW.data_ultima_alteracao = CURRENT_TIMESTAMP();
+    if old.nome <> new.nome then
+		set new.nome = upper(trim(new.nome));
+    end if;
+END //
+
+DELIMITER ;
+
+
 
 
 -- Procedures e indices para usuários
 delimiter //
 create procedure criar_auditoria_log(
-	in id_dado int,
     in tabela_dada varchar(30),
     in operacao_dada varchar(30),
     in usuario_dado varchar(30),
-    in valor_antigo varchar(100),
-    in valor_atual varchar(100),
-    in data_hora datetime
+    in valor_antigo_dado varchar(100),
+    in valor_atual_dado varchar(100),
+    in data_hora_dada datetime
 )
 begin
-	insert into auditoria(tabela, operacao, usuario, valor_antigo, valor_novo, data_hora)
+	insert into auditoria_log(tabela, operacao, usuario, valor_antigo, valor_novo, data_hora)
     values(tabela_dada, operacao_dada, usuario_dado, valor_antigo_dado, valor_atual_dado, data_hora_dada);
 end//
 delimiter ;
@@ -268,7 +313,7 @@ create procedure criar_assinantes(
 begin
 	insert into assinantes(nome, cpf, email, data_nascimento, uf)
 	values(nome_dado, cpf_dado, email_dado, data_nascimento_dado, uf_dado);
-    call criar_auditoria_log("assinantes", "insert", current_user(), null, nome_dado, current_timestamp());
+    call criar_auditoria_log("assinantes", "insert", user(), null, nome_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -278,11 +323,12 @@ create procedure inserir_saldo(
 	in saldo_dado decimal(10, 2)
 )
 begin
-	declare v_saldo int;
+	declare v_saldo decimal(10,2);
+    declare novo_saldo decimal(10,2);
     select saldo into v_saldo from assinantes where id = id_dado;
     set novo_saldo = v_saldo + saldo_dado;
 	update assinantes set saldo = novo_saldo where id = id_dado;
-    call criar_auditoria_log("assinantes", "update", current_user(), v_saldo, novo_saldo, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_saldo, novo_saldo, current_timestamp());
 end//
 delimiter ;
 
@@ -306,7 +352,7 @@ begin
 	saldo = saldo - valor_mensalidade_dado
 	where id = id_dado;
 	set novo_saldo = v_saldo - valor_mensalidade_dado;
-    call criar_auditoria_log("assinantes", "update", current_user(), v_saldo, novo_saldo, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_saldo, novo_saldo, current_timestamp());
 end//
 delimiter ;
 
@@ -323,7 +369,7 @@ begin
 	nome = nome_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("assinantes", "update", current_user(), v_nome, nome_dado, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_nome, nome_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -340,7 +386,7 @@ begin
 	cpf = cpf_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("assinantes", "update", current_user(), v_cpf, cpf_dado, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_cpf, cpf_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -357,7 +403,7 @@ begin
 	email = email_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("assinantes", "update", current_user(), v_email, email_dado, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_email, email_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -374,7 +420,7 @@ begin
 	data_nascimento = data_nascimento_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("assinantes", "update", current_user(), v_data_nascimento, data_nascimento_dado, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_data_nascimento, data_nascimento_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -391,7 +437,7 @@ begin
 	uf = uf_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("assinantes", "update", current_user(), v_uf, uf_dado, current_timestamp());
+    call criar_auditoria_log("assinantes", "update", user(), v_uf, uf_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -413,7 +459,7 @@ begin
 	insert into perfis(nome_exibicao, assinante_id)
 	values(nome_exibicao_dado, id_dado);
     
-    call criar_auditoria_log("perfis", "insert", current_user(), null, nome_exibicao_dado, current_timestamp());
+    call criar_auditoria_log("perfis", "insert", user(), null, nome_exibicao_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -430,7 +476,7 @@ begin
 	nome_exibicao = nome_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("perfis", "insert", current_user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
+    call criar_auditoria_log("perfis", "insert", user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -443,7 +489,7 @@ begin
 	insert into preferencias(perfil_id, preferencia)
 	values(id_dado, nome_exibicao_dado);
     
-    call criar_auditoria_log("preferencias", "insert", current_user(), null, preferencia_dada, current_timestamp());
+    call criar_auditoria_log("preferencias", "insert", user(), null, preferencia_dada, current_timestamp());
 end//
 delimiter ;
 
@@ -462,7 +508,7 @@ create procedure remover_preferencias(
 )
 begin
 	delete from preferencias where id = id_dado;
-    call criar_auditoria_log("preferencias", "delete", current_user(), id_dado, null, current_timestamp());
+    call criar_auditoria_log("preferencias", "delete", user(), id_dado, null, current_timestamp());
 end//
 delimiter ;
 
@@ -475,7 +521,7 @@ begin
 	ativo = 0
 	where id = id_dado;
     
-    call criar_auditoria_log("perfis", "update", current_user(), 1, 0, current_timestamp());
+    call criar_auditoria_log("perfis", "update", user(), 1, 0, current_timestamp());
 end//
 delimiter ;
 
@@ -529,7 +575,7 @@ begin
     
     select last_insert_id() as id;
     
-    call criar_auditoria_log("reproducoes", "insert", current_user(), null, ip_dado, current_timestamp());
+    call criar_auditoria_log("reproducoes", "insert", user(), null, ip_dado, current_timestamp());
     commit;
 end//
 delimiter ;
@@ -544,7 +590,7 @@ begin
 	concluido = 1
 	where perfil_id = perfil_id_dado and video_id = video_id_dado;
     
-    call criar_auditoria_log("reproducoes", "update", current_user(), 0, 1, current_timestamp());
+    call criar_auditoria_log("reproducoes", "update", user(), 0, 1, current_timestamp());
 end//
 delimiter ;
 
@@ -561,7 +607,7 @@ begin
 	tempo_assistido_segundos = tempo_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("reproducoes", "update", current_user(), v_tempo, tempo_dado, current_timestamp());
+    call criar_auditoria_log("reproducoes", "update", user(), v_tempo, tempo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -601,8 +647,19 @@ begin
 	insert into filmes(video_id)
 	values(LAST_INSERT_ID());
     
-    call criar_auditoria_log("videos", "insert", current_user(), null, titulo_dado, current_timestamp());
-    call criar_auditoria_log("filmes", "insert", current_user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("filmes", "insert", user(), null, titulo_dado, current_timestamp());
+end//
+delimiter ;
+
+delimiter //
+create procedure editar_nome_videos(
+	in id_dado int,
+    in titulo_dado varchar(50)
+)
+begin
+	update videos set
+    titulo = titulo_dado
+    where id = id_dado;
 end//
 delimiter ;
 
@@ -614,7 +671,7 @@ create procedure colocar_generos_filmes(
 	begin
 		insert into generofilmes(filme_id, genero)
 		values(filme_id_dado, genero_dado);
-        call criar_auditoria_log("generofilmes", "insert", current_user(), null, genero_dado, current_timestamp());
+        call criar_auditoria_log("generofilmes", "insert", user(), null, genero_dado, current_timestamp());
 	end//
 delimiter ;
 
@@ -626,7 +683,7 @@ create procedure colocar_produtoras(
 begin
 	insert into videosprodutoras(video_id, produtora_id)
 	values(video_id_dado, produtora_id_dado);
-    call criar_auditoria_log("videosprodutoras", "insert", current_user(), null, produtora_id_dado, current_timestamp());
+    call criar_auditoria_log("videosprodutoras", "insert", user(), null, produtora_id_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -638,7 +695,7 @@ begin
 	insert into series(titulo)
 	values(titulo_dado);
 	end//
-    call criar_auditoria_log("series", "insert", current_user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("series", "insert", user(), null, titulo_dado, current_timestamp());
 delimiter ;
 
 delimiter //
@@ -649,7 +706,7 @@ create procedure colocar_generos_series(
 	begin
 		insert into generoseries(serie_id, genero)
 		values(serie_id_dado, genero_dado);
-        call criar_auditoria_log("generoseries", "insert", current_user(), null, genero_dado, current_timestamp());
+        call criar_auditoria_log("generoseries", "insert", user(), null, genero_dado, current_timestamp());
 	end//
 delimiter ;
 
@@ -663,7 +720,7 @@ begin
 	insert into temporadas(titulo, numero, serie_id)
 	values
 	(titulo_dado, numero_dado, serie_id_dado);
-    call criar_auditoria_log("temporadas", "insert", current_user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("temporadas", "insert", user(), null, titulo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -683,8 +740,8 @@ begin
 	values
 	(numero_dado, LAST_INSERT_ID(), id_temporada_dada);
     
-    call criar_auditoria_log("videos", "insert", current_user(), null, titulo_dado, current_timestamp());
-    call criar_auditoria_log("episodios", "insert", current_user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("videos", "insert", user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("episodios", "insert", user(), null, titulo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -704,7 +761,7 @@ begin
     
     select ativo into status_novo from videos where id = id_dado;
     
-    call criar_auditoria_log("videos", "insert", current_user(), status_velho, status_novo, current_timestamp());
+    call criar_auditoria_log("videos", "insert", user(), status_velho, status_novo, current_timestamp());
 end//
 delimiter ;
 
@@ -798,6 +855,19 @@ inner join perfis on assinantes.id = perfis.assinante_id
 inner join reproducoes on perfis.id = reproducoes.perfil_id
 group by UF, Dispositivo;
 
+DELIMITER //
+
+CREATE FUNCTION calcular_idade(
+    p_data_nascimento DATE
+)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    RETURN TIMESTAMPDIFF(YEAR, p_data_nascimento, CURDATE());
+END //
+
+DELIMITER ;
+
 create or replace view metricas_engajamento_LGPD as
 SELECT 
 	CONCAT(assinantes.id) AS Id_do_Usuário,
@@ -812,18 +882,6 @@ inner join preferencias on perfis.id = preferencias.perfil_id
 group by assinantes.id, assinantes.data_nascimento
 order by sum(reproducoes.tempo_assistido_segundos) desc;
 
-DELIMITER //
-
-CREATE FUNCTION calcular_idade(
-    p_data_nascimento DATE
-)
-RETURNS INT
-DETERMINISTIC
-BEGIN
-    RETURN TIMESTAMPDIFF(YEAR, p_data_nascimento, CURDATE());
-END //
-
-DELIMITER ;
 
 
 CREATE INDEX idx_reproducoes_video_data ON reproducoes(video_id, data_hora_inicio);
@@ -958,13 +1016,17 @@ CREATE INDEX idx_produtoras_nome ON produtoras(nome);
 
 
 /*Sistema do app/site da streamflow. Inclui ações do usuário + geração automática de relatórios*/
-create user 'app_streamflow'@'localhost' identified by 'SenhaApp#123';
+create user 'app_streamflow'@'localhost' identified by 'SenhaApp';
 
 grant execute on procedure streamflow.informacoes_assinantes to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.criar_assinantes to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.inserir_saldo to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.assinatura to 'app_streamflow'@'localhost';
-grant execute on procedure streamflow.atualizar_dados_assinantes to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.atualizar_nome_assinantes to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.atualizar_cpf_assinantes to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.atualizar_email_assinantes to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.atualizar_data_nascimento_assinantes to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.atualizar_uf_assinantes to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_perfis to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.criar_perfis to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.atualizar_perfis to 'app_streamflow'@'localhost';
@@ -974,7 +1036,7 @@ grant execute on procedure streamflow.remover_preferencias to 'app_streamflow'@'
 grant execute on procedure streamflow.desativar_perfis to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_filmes to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.listar_series to 'app_streamflow'@'localhost';
-grant execute on procedure streamflow.criar_relatorios to 'app_streamflow'@'localhost';
+grant execute on procedure streamflow.registrar_reproducao to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.marcar_concluido to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.atualizar_tempo_sessao to 'app_streamflow'@'localhost';
 grant execute on procedure streamflow.painel_continuar_assistindo to 'app_streamflow'@'localhost';
@@ -990,11 +1052,15 @@ grant execute on procedure streamflow.listar_produtoras_videos to 'app_streamflo
 grant execute on procedure streamflow.listar_temporadas to 'app_streamflow'@'localhost';
 
 /*Sistema usado pelos auditores (equipe de marketing e analistas)*/
-create user 'auditor_streamflow'@'localhost' identified by 'SenhaAuditor#123';
+create user 'auditor_streamflow'@'localhost' identified by 'SenhaAuditor';
 
-grant select on cobranca_estudios to 'auditor_streamflow'@'localhost';
 grant select on trafego_regiao to 'auditor_streamflow'@'localhost';
 grant select on metricas_engajamento_LGPD to 'auditor_streamflow'@'localhost';
+
+grant select on streamflow.faturamento_produtoras to 'auditor_streamflow'@'localhost';
+grant select on streamflow.auditoria_log to 'auditor_streamflow'@'localhost';
+
+grant execute on procedure streamflow.gerar_faturamento_mensal to 'auditor_streamflow'@'localhost';
 
 grant execute on procedure streamflow.filmes_por_nome to 'auditor_streamflow'@'localhost';
 grant execute on procedure streamflow.series_por_nome to 'auditor_streamflow'@'localhost';
@@ -1007,9 +1073,10 @@ grant execute on procedure streamflow.listar_produtoras_videos to 'auditor_strea
 grant execute on procedure streamflow.listar_temporadas to 'auditor_streamflow'@'localhost';
 
 /*Sistema usado pelas produtoras para lançar filmes e séries*/
-create user 'produtora_streamflow'@'localhost' identified by 'SenhaProdutora#123';
+create user 'produtora_streamflow'@'localhost' identified by 'SenhaProdutora';
 
 grant execute on procedure streamflow.adicionar_filmes to 'produtora_streamflow'@'localhost';
+grant execute on procedure streamflow.editar_nome_videos to 'produtora_streamflow'@'localhost';
 grant execute on procedure streamflow.colocar_generos_filmes to 'produtora_streamflow'@'localhost';
 grant execute on procedure streamflow.adicionar_series to 'produtora_streamflow'@'localhost';
 grant execute on procedure streamflow.colocar_generos_series to 'produtora_streamflow'@'localhost';
