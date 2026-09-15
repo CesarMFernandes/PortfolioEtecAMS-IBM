@@ -1,6 +1,7 @@
 use streamflow;
 
 select * from auditoria_log order by id desc;
+select * from faturamento_produtoras order by minutos_consumidos;
 
 -- Mostra o tempo total assistido de todos os vídeos produzidos por diferentes produtoras
 select * from cobranca_estudios;
@@ -10,6 +11,9 @@ select * from trafego_regiao;
 
 -- Lista usuários e quantidade de visualizações, não mostrando informações sensíveis, como nome, email e cpf
 select * from metricas_engajamento_LGPD;
+
+-- gera registro de quantos minutos assistidos por cada produtora
+call gerar_faturamento_mensal('2026-09-01'); -- intervalo de tempo especificado, sistema calcula até 1 mês
 
 /*Listar filmes por nome*/
 call filmes_por_nome("Backrooms"); -- título
