@@ -1,5 +1,7 @@
 use streamflow;
 
+select * from auditoria_log order by id desc;
+
 -- Mostra o tempo total assistido de todos os vídeos produzidos por diferentes produtoras
 select * from cobranca_estudios;
 
