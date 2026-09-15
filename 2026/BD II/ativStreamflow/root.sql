@@ -473,7 +473,7 @@ begin
     select nome_exibicao into v_nome_exibicao from perfis where id = id_dado;
 
 	update perfis set
-	nome_exibicao = nome_dado
+	nome_exibicao = nome_exibicao_dado
 	where id = id_dado;
     
     call criar_auditoria_log("perfis", "insert", user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
@@ -487,7 +487,7 @@ create procedure registrar_preferencias(
 )
 begin
 	insert into preferencias(perfil_id, preferencia)
-	values(id_dado, nome_exibicao_dado);
+	values(id_dado, preferencia_dada);
     
     call criar_auditoria_log("preferencias", "insert", user(), null, preferencia_dada, current_timestamp());
 end//
@@ -776,7 +776,6 @@ where reproducoes.data_hora_inicio >= DATE_FORMAT(current_timestamp(), '%Y-%m-01
 group by produtoras.id;
 
 DELIMITER //
-
 -- Faz select dos minutos consumidos de uma produtora especifica, em um intervalo de tempo especificado
 CREATE FUNCTION minutos_assistidos_por_produtora(
     p_id_produtora INT,
@@ -788,7 +787,7 @@ BEGIN
 
     DECLARE v_minutos DECIMAL(10,2);
 
-    SELECT COALESCE(SUM(r.tempo_assistido_segundos) / 60, 0)
+    SELECT COALESCE(SUM(reproducoes.tempo_assistido_segundos) / 60, 0)
     INTO v_minutos
     FROM produtoras
     INNER JOIN videosprodutoras
