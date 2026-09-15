@@ -10,10 +10,14 @@ call criar_assinantes("Fulano da Silva", "12312312312", "silva.fulano@gmail.com"
 call inserir_saldo(1, 10.00); -- id do assinante, saldo a ser acrescentado
 
 /*Renovar assinatura / Cobrança de assinatura*/
-call assinatura(1); -- id do assinante
+call assinatura(1, 10.00); -- id do assinante, valor da assinatura
 
 /*Atualizar dados*/
-call atualizar_dados_assinantes(1, "Ciclano de Souza", "45645645645", "souza.ciclano@outlook.net", "1994-11-09", "RJ"); -- id do assinante, nome, cpf, email, data de nascimento, UF
+call atualizar_nome_assinantes(1, "Ciclano de Souza"); -- id do assinante, nome
+call atualizar_cpf_assinantes(1, "45645645645"); -- id do assinante, cpf
+call atualizar_email_assinantes(1, "souza.ciclano@outlook.net"); -- id do assinante, email
+call atualizar_data_nascimento_assinantes(1, "1994-11-09"); -- id do assinante, data de nascimento
+call atualizar_uf_assinantes(1, "RJ"); -- id do assinante, UF
 
 
 
@@ -75,7 +79,7 @@ call listar_episodios(1); -- id da série
 call listar_produtoras_videos(1); -- id do vídeo
 
 /*Criação de relatório ao clicar em play*/
-call criar_relatorios("123.12.123.12", "Web", 1, 2); -- ip, dispositivo, id perfil, id vídeo
+call registrar_reproducao("123.12.123.12", "Web", 1, 2); -- ip, dispositivo, id perfil, id vídeo
 
 /*Marca todos os registros como concluído de um vídeo e perfil caso o perfil tenha terminado o vídeo*/
 call marcar_concluido(1, 2); -- id perfil, id vídeo

@@ -14,8 +14,7 @@ create table assinantes(
     data_nascimento date not null,
     uf char(2) not null,
     saldo decimal(10, 2) not null default(0) check(saldo>=0), /*uso de decimal para prevenir erro de ponto flutuante, 0 por padrão pois o saldo é colocado depois da criação da conta, check para respeitar a regra de negócio*/
-    data_cadastro date not null default(current_timestamp()),
-    assinatura_ativa boolean not null default(0) /*status da assinatura, desativada por padrão até ser renovada*/
+    data_cadastro date not null default(current_timestamp())
 );
 
 create table perfis(
@@ -110,7 +109,135 @@ create table reproducoes(
     foreign key (video_id) references videos(id) on delete restrict on update cascade /*Usa-se on delete restrict pois o histórico deve ser imutável, porém usa-se on update cascade para não ter chance de confundir as produtoras quando calcular o pagamento*/
 );
 
+/*Mostra quantos minutos cada produtora atingiu em seus vídeos. Necessário para calcular faturamento*/
+create table faturamento_produtoras( 
+	id int primary key auto_increment,
+    produtora_id int not null,
+    competencia date not null,
+    minutos_consumidos int not null,
+    foreign key (produtora_id) references produtoras(id) on delete restrict on update cascade
+);
+
+/*Cria um registro para cada query sql*/
+create table auditoria_log( 
+	id int primary key auto_increment,
+    tabela varchar(30) not null,
+    operacao varchar(10) not null,
+    usuario varchar(30) not null,
+    valor_antigo varchar(100),
+    valor_novo varchar(100),
+    data_hora datetime not null default(current_timestamp())
+);
+
+/*Mostra quantas reproduções foram feitas em um vídeo*/
+create table resumo_reproducao( 
+	id int primary key auto_increment,
+    total_acessos int,
+    video_id int,
+    foreign key (video_id) references videos(id) on delete restrict on update cascade
+);
+
+-- Triggers e Handlers
+DELIMITER //
+
+CREATE TRIGGER verificar_saldo
+BEFORE UPDATE ON assinantes
+FOR EACH ROW
+BEGIN
+IF NEW.saldo < 0 THEN
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT = 'Saldo insuficiente';
+END IF;
+END //
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER verificar_perfil_insert
+BEFORE INSERT ON perfis
+FOR EACH ROW
+BEGIN
+-- Verifica se o assinante já possui 5 perfis ativos
+IF (SELECT COUNT(*) FROM perfis WHERE assinante_id = NEW.assinante_id AND ativo = 1) >= 5 THEN
+	SIGNAL SQLSTATE '45000'
+	SET MESSAGE_TEXT = 'O assinante já possui o limite de 5 perfis ativos';
+END IF;
+
+-- Verifica se já existe um perfil com o mesmo nome
+IF (SELECT COUNT(*) FROM perfis WHERE assinante_id = NEW.assinante_id AND nome_exibicao = NEW.nome_exibicao AND ativo = 1) > 0 THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Já existe um perfil com esse nome para este assinante';
+END IF;
+
+
+END //
+
+CREATE TRIGGER verificar_perfil_update
+BEFORE UPDATE ON perfis
+FOR EACH ROW
+BEGIN
+-- Verifica se o novo nome já pertence a outro perfil
+IF (
+SELECT COUNT(*)
+FROM perfis
+WHERE assinante_id = NEW.assinante_id
+AND nome_exibicao = NEW.nome_exibicao
+AND ativo = 1
+AND id <> OLD.id
+) > 0 THEN
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT = 'Já existe outro perfil com esse nome para este assinante';
+END IF;
+END //
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER verificar_preferencia
+BEFORE INSERT ON preferencias
+FOR EACH ROW
+BEGIN
+IF (SELECT COUNT(*) FROM preferencias WHERE perfil_id = NEW.perfil_id AND preferencia = NEW.preferencia) > 0 THEN
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT = 'Esta preferência já foi cadastrada para este perfil';
+END IF;
+END //
+
+DELIMITER ;
+
+DELIMITER //
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+    ROLLBACK;
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Erro ao registrar reprodução';
+END;
+
+DELIMITER ;
+
+
+
+
 -- Procedures e indices para usuários
+delimiter //
+create procedure criar_auditoria_log(
+	in id_dado int,
+    in tabela_dada varchar(30),
+    in operacao_dada varchar(30),
+    in usuario_dado varchar(30),
+    in valor_antigo varchar(100),
+    in valor_atual varchar(100),
+    in data_hora datetime
+)
+begin
+	insert into auditoria(tabela, operacao, usuario, valor_antigo, valor_novo, data_hora)
+    values(tabela_dada, operacao_dada, usuario_dado, valor_antigo_dado, valor_atual_dado, data_hora_dada);
+end//
+delimiter ;
+
 delimiter //
 create procedure informacoes_assinantes(
 	in id_dado int
@@ -131,6 +258,7 @@ create procedure criar_assinantes(
 begin
 	insert into assinantes(nome, cpf, email, data_nascimento, uf)
 	values(nome_dado, cpf_dado, email_dado, data_nascimento_dado, uf_dado);
+    call criar_auditoria_log("assinantes", "insert", current_user(), null, nome_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -140,39 +268,120 @@ create procedure inserir_saldo(
 	in saldo_dado decimal(10, 2)
 )
 begin
-	update assinantes set saldo = saldo + saldo_dado where id = id_dado;
+	declare v_saldo int;
+    select saldo into v_saldo from assinantes where id = id_dado;
+    set novo_saldo = v_saldo + saldo_dado;
+	update assinantes set saldo = novo_saldo where id = id_dado;
+    call criar_auditoria_log("assinantes", "update", current_user(), v_saldo, novo_saldo, current_timestamp());
 end//
 delimiter ;
 
 delimiter //
 create procedure assinatura(
-	in id_dado int
+	in id_dado int,
+    in valor_mensalidade_dado int,
+    out novo_saldo decimal(10, 2)
 )
 begin
-	update assinantes set 
-	assinatura_ativa = if(saldo>=10, 1, 0),
-	saldo = if(saldo>=10, saldo-10, saldo)
+	declare v_saldo decimal(10, 2);
+    
+    -- Buscar saldo
+    select saldo
+    into v_saldo
+    from assinantes
+    where id = id_dado;
+    
+    -- Atualizar saldo
+	update assinantes set
+	saldo = saldo - valor_mensalidade_dado
 	where id = id_dado;
+	set novo_saldo = v_saldo - valor_mensalidade_dado;
+    call criar_auditoria_log("assinantes", "update", current_user(), v_saldo, novo_saldo, current_timestamp());
 end//
 delimiter ;
 
 delimiter //
-create procedure atualizar_dados_assinantes(
+create procedure atualizar_nome_assinantes(
 	in id_dado int,
-	in nome_dado varchar(50), 
-	in cpf_dado varchar(11), 
-	in email_dado varchar(100), 
-	in data_nascimento_dado date, 
+	in nome_dado varchar(50)
+)
+begin
+	declare v_nome varchar(50);
+    select nome into v_nome from assinantes where id = id_dado;
+	
+	update assinantes set 
+	nome = nome_dado
+	where id = id_dado;
+    
+    call criar_auditoria_log("assinantes", "update", current_user(), v_nome, nome_dado, current_timestamp());
+end//
+delimiter ;
+
+delimiter //
+create procedure atualizar_cpf_assinantes(
+	in id_dado int,
+	in cpf_dado varchar(11)
+)
+begin
+	declare v_cpf varchar(11);
+    select cpf into v_cpf from assinantes where id = id_dado;
+	
+	update assinantes set 
+	cpf = cpf_dado
+	where id = id_dado;
+    
+    call criar_auditoria_log("assinantes", "update", current_user(), v_cpf, cpf_dado, current_timestamp());
+end//
+delimiter ;
+
+delimiter //
+create procedure atualizar_email_assinantes(
+	in id_dado int,
+	in email_dado varchar(100)
+)
+begin
+	declare v_email varchar(100);
+    select email into v_email from assinantes where id = id_dado;
+	
+	update assinantes set 
+	email = email_dado
+	where id = id_dado;
+    
+    call criar_auditoria_log("assinantes", "update", current_user(), v_email, email_dado, current_timestamp());
+end//
+delimiter ;
+
+delimiter //
+create procedure atualizar_data_nascimento_assinantes(
+	in id_dado int, 
+	in data_nascimento_dado date
+)
+begin
+	declare v_data_nascimento date;
+    select data_nascimento into v_data_nascimento from assinantes where id = id_dado;
+	
+	update assinantes set 
+	data_nascimento = data_nascimento_dado
+	where id = id_dado;
+    
+    call criar_auditoria_log("assinantes", "update", current_user(), v_data_nascimento, data_nascimento_dado, current_timestamp());
+end//
+delimiter ;
+
+delimiter //
+create procedure atualizar_uf_assinantes(
+	in id_dado int,
 	in uf_dado char(2)
 )
 begin
+	declare v_uf char(2);
+    select uf into v_uf from assinantes where id = id_dado;
+	
 	update assinantes set 
-	nome = nome_dado,
-	cpf = cpf_dado,
-	email = email_dado,
-	data_nascimento = data_nascimento_dado,
 	uf = uf_dado
 	where id = id_dado;
+    
+    call criar_auditoria_log("assinantes", "update", current_user(), v_uf, uf_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -191,10 +400,10 @@ create procedure criar_perfis(
     in nome_exibicao_dado varchar(30)
 )
 begin
-	insert into perfis (nome_exibicao, assinante_id)
-	select nome_exibicao_dado, id_dado
-	where (SELECT count(*) FROM perfis WHERE assinante_id = id_dado and ativo = 1) <= 4 and 
-	(select count(*) from perfis where assinante_id = id_dado and nome_exibicao like nome_exibicao_dado and ativo = 1) = 0; /*apenas faz o insert caso não tenha 5 perfis ou mais e caso não tenha nome duplicado*/
+	insert into perfis(nome_exibicao, assinante_id)
+	values(nome_exibicao_dado, id_dado);
+    
+    call criar_auditoria_log("perfis", "insert", current_user(), null, nome_exibicao_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -204,9 +413,14 @@ create procedure atualizar_perfis(
     in nome_exibicao_dado varchar(30)
 )
 begin
+	declare v_nome_exibicao varchar(30);
+    select nome_exibicao into v_nome_exibicao from perfis where id = id_dado;
+
 	update perfis set
-	nome_exibicao = if((select count(*) from perfis where assinante_id = id_dado and nome_exibicao like nome_exibicao_dado and ativo = 1) = 0, nome_exibicao_dado, nome_exibicao) /*apenas atualiza caso não gere nome duplicado*/
+	nome_exibicao = nome_dado
 	where id = id_dado;
+    
+    call criar_auditoria_log("perfis", "insert", current_user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -216,9 +430,10 @@ create procedure registrar_preferencias(
     in preferencia_dada enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário")
 )
 begin
-	insert into preferencias (perfil_id, preferencia)
-	select id_dado, preferencia_dada
-	where (select count(*) from preferencias where perfil_id = id_dado and preferencia like preferencia_dada) = 0;
+	insert into preferencias(perfil_id, preferencia)
+	values(id_dado, nome_exibicao_dado);
+    
+    call criar_auditoria_log("preferencias", "insert", current_user(), null, preferencia_dada, current_timestamp());
 end//
 delimiter ;
 
@@ -237,6 +452,7 @@ create procedure remover_preferencias(
 )
 begin
 	delete from preferencias where id = id_dado;
+    call criar_auditoria_log("preferencias", "delete", current_user(), id_dado, null, current_timestamp());
 end//
 delimiter ;
 
@@ -248,6 +464,8 @@ begin
 	update perfis set 
 	ativo = 0
 	where id = id_dado;
+    
+    call criar_auditoria_log("perfis", "update", current_user(), 1, 0, current_timestamp());
 end//
 delimiter ;
 
@@ -281,17 +499,21 @@ end//
 delimiter ;
 
 delimiter //
-create procedure criar_relatorios(
+create procedure registrar_reproducao(
 	in ip_dado varchar(15),
     in dispositivo_dado enum('SmartTV', 'App Smartphone', 'App Tablet', 'App PC', 'Web', 'Geladeira Smart'),
     in perfil_id_dado int,
     in video_id_dado int
 )
 begin
+	start transaction;
 	insert into reproducoes(ip, dispositivo, perfil_id, video_id)
 	values(ip_dado, dispositivo_dado, perfil_id_dado, video_id_dado);
     
-    select id from reproducoes where id = last_insert_id();
+    select last_insert_id() as id;
+    
+    call criar_auditoria_log("reproducoes", "insert", current_user(), null, ip_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -304,6 +526,8 @@ begin
 	update reproducoes set
 	concluido = 1
 	where perfil_id = perfil_id_dado and video_id = video_id_dado;
+    
+    call criar_auditoria_log("reproducoes", "update", current_user(), 0, 1, current_timestamp());
 end//
 delimiter ;
 
@@ -313,9 +537,14 @@ create procedure atualizar_tempo_sessao(
     in tempo_dado int
 )
 begin
+	declare v_tempo int;
+    select tempo_assistido_segundos into v_tempo from reproducoes where id = id_dado;
+
 	update reproducoes set
 	tempo_assistido_segundos = tempo_dado
 	where id = id_dado;
+    
+    call criar_auditoria_log("reproducoes", "update", current_user(), v_tempo, tempo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -354,6 +583,9 @@ begin
     
 	insert into filmes(video_id)
 	values(LAST_INSERT_ID());
+    
+    call criar_auditoria_log("videos", "insert", current_user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("filmes", "insert", current_user(), null, titulo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -365,6 +597,7 @@ create procedure colocar_generos_filmes(
 	begin
 		insert into generofilmes(filme_id, genero)
 		values(filme_id_dado, genero_dado);
+        call criar_auditoria_log("generofilmes", "insert", current_user(), null, genero_dado, current_timestamp());
 	end//
 delimiter ;
 
@@ -376,6 +609,7 @@ create procedure colocar_produtoras(
 begin
 	insert into videosprodutoras(video_id, produtora_id)
 	values(video_id_dado, produtora_id_dado);
+    call criar_auditoria_log("videosprodutoras", "insert", current_user(), null, produtora_id_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -387,6 +621,7 @@ begin
 	insert into series(titulo)
 	values(titulo_dado);
 	end//
+    call criar_auditoria_log("series", "insert", current_user(), null, titulo_dado, current_timestamp());
 delimiter ;
 
 delimiter //
@@ -397,6 +632,7 @@ create procedure colocar_generos_series(
 	begin
 		insert into generoseries(serie_id, genero)
 		values(serie_id_dado, genero_dado);
+        call criar_auditoria_log("generoseries", "insert", current_user(), null, genero_dado, current_timestamp());
 	end//
 delimiter ;
 
@@ -410,6 +646,7 @@ begin
 	insert into temporadas(titulo, numero, serie_id)
 	values
 	(titulo_dado, numero_dado, serie_id_dado);
+    call criar_auditoria_log("temporadas", "insert", current_user(), null, titulo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -428,6 +665,9 @@ begin
 	insert into episodios(numero, video_id, temporada_id)
 	values
 	(numero_dado, LAST_INSERT_ID(), id_temporada_dada);
+    
+    call criar_auditoria_log("videos", "insert", current_user(), null, titulo_dado, current_timestamp());
+    call criar_auditoria_log("episodios", "insert", current_user(), null, titulo_dado, current_timestamp());
 end//
 delimiter ;
 
@@ -436,9 +676,18 @@ create procedure status_videos(
     in id_dado int
 )
 begin
+	declare status_velho boolean;
+    declare status_novo boolean;
+    
+    select ativo into status_velho from videos where id = id_dado;
+
 	update videos set
 	ativo = if(ativo = 1, 0, 1)
 	where id = id_dado;
+    
+    select ativo into status_novo from videos where id = id_dado;
+    
+    call criar_auditoria_log("videos", "insert", current_user(), status_velho, status_novo, current_timestamp());
 end//
 delimiter ;
 
