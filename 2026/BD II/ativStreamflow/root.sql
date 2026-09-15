@@ -872,15 +872,12 @@ SELECT
 	CONCAT(assinantes.id) AS Id_do_Usuário,
     calcular_idade(assinantes.data_nascimento) AS Idade,
     sec_to_time(sum(reproducoes.tempo_assistido_segundos)) as Tempo_Assistindo,
-    count(reproducoes.id) as Número_de_Acessos,
-    group_concat(distinct preferencias.preferencia separator ', ') as Preferências
+    count(reproducoes.id) as Número_de_Acessos
 FROM assinantes
 inner join perfis on assinantes.id = perfis.assinante_id
 inner join reproducoes on perfis.id = reproducoes.perfil_id
-inner join preferencias on perfis.id = preferencias.perfil_id
 group by assinantes.id, assinantes.data_nascimento
 order by sum(reproducoes.tempo_assistido_segundos) desc;
-
 
 
 CREATE INDEX idx_reproducoes_video_data ON reproducoes(video_id, data_hora_inicio);
@@ -1053,6 +1050,7 @@ grant execute on procedure streamflow.listar_temporadas to 'app_streamflow'@'loc
 /*Sistema usado pelos auditores (equipe de marketing e analistas)*/
 create user 'auditor_streamflow'@'localhost' identified by 'SenhaAuditor';
 
+grant select on cobranca_estudios to 'auditor_streamflow'@'localhost';
 grant select on trafego_regiao to 'auditor_streamflow'@'localhost';
 grant select on metricas_engajamento_LGPD to 'auditor_streamflow'@'localhost';
 
@@ -1099,3 +1097,5 @@ values
 ("Lord Miller Productions", "Estados Unidos"), ("Amazon MGM Studios", "Estados Unidos"),
 ("A24", "Estados Unidos"),
 ("David Production", "Japão");
+
+select * from reproducoes;
