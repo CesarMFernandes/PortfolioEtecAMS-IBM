@@ -30,10 +30,10 @@ call listar_produtoras_videos(1); -- id da produtora
 
 
 /*Sequencia de inserts para colocar um filme no ar*/
-call adicionar_filmes("Devoradores de Estrelas", 9360); -- Nome do filme, duração em segundos
+call adicionar_filmes("Devorador de Estrelas", 9360); -- Nome do filme, duração em segundos
 call adicionar_filmes("Backrooms, Um Não-Lugar", 6600);
 
-call editar_nome_videos(1, "Devorador de Estrelas");
+call editar_nome_videos(1, "Devoradores de Estrelas"); -- Id do vídeo, novo nome
 
 /*Colocar gêneros de um filme*/
 call colocar_generos_filmes(1, "Ficção Científica"); -- Id do filme, gênero
