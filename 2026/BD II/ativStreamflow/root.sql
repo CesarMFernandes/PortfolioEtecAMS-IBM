@@ -129,14 +129,6 @@ create table auditoria_log(
     data_hora datetime not null default(current_timestamp())
 );
 
-/*Mostra quantas reproduções foram feitas em um vídeo*/
-create table resumo_reproducao( 
-	id int primary key auto_increment,
-    total_acessos int,
-    video_id int,
-    foreign key (video_id) references videos(id) on delete restrict on update cascade
-);
-
 -- Triggers e Handlers
 DELIMITER //
 
@@ -193,6 +185,7 @@ END //
 
 DELIMITER ;
 
+
 DELIMITER //
 
 CREATE TRIGGER verificar_preferencia
@@ -206,6 +199,35 @@ END IF;
 END //
 
 DELIMITER ;
+
+
+DELIMITER //
+
+CREATE TRIGGER impedir_alteracao_reproducao
+BEFORE UPDATE ON reproducoes
+FOR EACH ROW
+BEGIN
+    IF NEW.data_hora_inicio <> OLD.data_hora_inicio
+       OR NEW.ip <> OLD.ip
+       OR NEW.dispositivo <> OLD.dispositivo
+       OR NEW.perfil_id <> OLD.perfil_id
+       OR NEW.video_id <> OLD.video_id THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Somente tempo_assistido_segundos e concluido podem ser alterados';
+    END IF;
+END //
+
+CREATE TRIGGER impedir_exclusao_reproducao
+BEFORE DELETE ON reproducoes
+FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'O histórico de reproduções não pode ser excluído';
+END //
+
+DELIMITER ;
+
 
 
 
