@@ -3,7 +3,7 @@ use streamflow;
 select * from auditoria_log order by id desc;
 select * from faturamento_produtoras order by minutos_consumidos;
 
--- Mostra o tempo total assistido de todos os vídeos produzidos por diferentes produtoras
+-- Mostra o tempo total assistido de todos os vídeos produzidos por diferentes produtoras, substituido pelo faturamento mensal, porém ainda pode ser úil
 select * from cobranca_estudios;
 
 -- Mostra total de visualizações, agrupando por estado e dispositivo
