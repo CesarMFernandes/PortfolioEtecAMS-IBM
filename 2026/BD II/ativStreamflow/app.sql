@@ -10,7 +10,7 @@ call criar_assinantes("Fulano da Silva", "12312312312", "silva.fulano@gmail.com"
 call inserir_saldo(1, 10.00); -- id do assinante, saldo a ser acrescentado
 
 /*Renovar assinatura / Cobrança de assinatura*/
-call assinatura(1, 10.00); -- id do assinante, valor da assinatura
+call assinatura(1, 10.00, @novo_saldo); -- id do assinante, valor da assinatura
 
 /*Atualizar dados*/
 call atualizar_nome_assinantes(1, "Ciclano de Souza"); -- id do assinante, nome
@@ -28,7 +28,7 @@ call listar_perfis(1); -- id do assinante
 call criar_perfis(1, "filho"); -- id do assinante, nome do perfil
 
 /*Atualizar nome de perfil*/
-call atualizar_perfis(1, "pai"); -- id do perfil, nome do perfil
+call atualizar_perfis(1, "pai"); -- id do perfil, nome do perfil novo
 
 /*Adicionar preferência ao perfil*/
 call registrar_preferencias(1, "Ação"); -- id do perfil, preferência
