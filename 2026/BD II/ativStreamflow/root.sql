@@ -335,7 +335,7 @@ delimiter ;
 delimiter //
 create procedure assinatura(
 	in id_dado int,
-    in valor_mensalidade_dado int,
+    in valor_mensalidade_dado decimal(10, 2),
     out novo_saldo decimal(10, 2)
 )
 begin
