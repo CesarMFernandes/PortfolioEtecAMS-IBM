@@ -1,7 +1,7 @@
 use streamflow;
 
 /*Listar filmes por nome*/
-call filmes_por_nome("Backrooms"); -- título
+call filmes_por_nome("Devorador"); -- título
 
 /*Listar séries por nome*/
 call series_por_nome("Jojo"); -- título
@@ -32,6 +32,8 @@ call listar_produtoras_videos(1); -- id da produtora
 /*Sequencia de inserts para colocar um filme no ar*/
 call adicionar_filmes("Devoradores de Estrelas", 9360); -- Nome do filme, duração em segundos
 call adicionar_filmes("Backrooms, Um Não-Lugar", 6600);
+
+call editar_nome_videos(1, "Devorador de Estrelas");
 
 /*Colocar gêneros de um filme*/
 call colocar_generos_filmes(1, "Ficção Científica"); -- Id do filme, gênero
