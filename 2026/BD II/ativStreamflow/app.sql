@@ -11,6 +11,7 @@ call inserir_saldo(1, 10.00); -- id do assinante, saldo a ser acrescentado
 
 /*Renovar assinatura / Cobrança de assinatura*/
 call assinatura(1, 10.00, @novo_saldo); -- id do assinante, valor da assinatura
+select @novo_saldo;
 
 /*Atualizar dados*/
 call atualizar_nome_assinantes(1, "Ciclano de Souza"); -- id do assinante, nome
