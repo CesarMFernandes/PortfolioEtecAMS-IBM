@@ -1,0 +1,25 @@
+GERAL:
+-botões de cadastrar invisíveis em todas as páginas
+-botões de confirmação difíceis de ler
+-problema de responsividade
+-falta de opções de atualização
+
+INÍCIO:
+-Total de Livros, Alunos e Empréstimos atualizam apenas após reiniciar o app
+
+ALUNOS:
+-cadastro de alunos aceita quase qualquer de valor
+-exclusão de alunos não funciona
+
+LIVROS:
+-abas além do ano e quantidade aceitam qualquer valor
+-ano e quantidade aceitam números negativos
+-deletar livros ainda não implementado
+-qtd. disponível apenas atualiza após reiniciar o app
+
+EMPRÉSTIMOS:
+-alunos e livros novos aparecem apenas após reiniciar o app
+-o mesmo aluno pode ter duas cópias do mesmo livro emprestadas ao mesmo tempo
+-livros podem ser emprestados mesmo quando tem 0 cópias ou cópias negativas
+-tela de erro de máximo de empréstimos não especifica o porquê
+-ordem da listagem de livros emprestados pode causar confusão
