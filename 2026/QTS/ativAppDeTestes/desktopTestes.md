@@ -1,28 +1,28 @@
 <h1>Caixa preta e Não funcionais</h1>
 
-GERAL:
--botões de cadastrar invisíveis em todas as páginas
--botões de confirmação difíceis de ler
--problema de responsividade
--falta de opções de atualização
+GERAL:<br>
+-botões de cadastrar invisíveis em todas as páginas<br>
+-botões de confirmação difíceis de ler<br>
+-problema de responsividade<br>
+-falta de opções de atualização<br>
 
-INÍCIO:
--Total de Livros, Alunos e Empréstimos atualizam apenas após reiniciar o app
+INÍCIO:<br>
+-Total de Livros, Alunos e Empréstimos atualizam apenas após reiniciar o app<br>
 
-ALUNOS:
--cadastro de alunos aceita quase qualquer de valor
--cadastro de alunos aceita emails iguais
--exclusão de alunos não funciona
+ALUNOS:<br>
+-cadastro de alunos aceita quase qualquer de valor<br>
+-cadastro de alunos aceita emails iguais<br>
+-exclusão de alunos não funciona<br>
 
-LIVROS:
--abas além do ano e quantidade aceitam qualquer valor
--ano e quantidade aceitam números negativos
--deletar livros ainda não implementado
--qtd. disponível apenas atualiza após reiniciar o app
+LIVROS:<br>
+-abas além do ano e quantidade aceitam qualquer valor<br>
+-ano e quantidade aceitam números negativos<br>
+-deletar livros ainda não implementado<br>
+-qtd. disponível apenas atualiza após reiniciar o app<br>
 
-EMPRÉSTIMOS:
--alunos e livros novos aparecem apenas após reiniciar o app
--o mesmo aluno pode ter duas cópias do mesmo livro emprestadas ao mesmo tempo
--livros podem ser emprestados mesmo quando tem 0 cópias ou cópias negativas
--tela de erro de máximo de empréstimos não especifica o porquê
--ordem da listagem de livros emprestados pode causar confusão
+EMPRÉSTIMOS:<br>
+-alunos e livros novos aparecem apenas após reiniciar o app<br>
+-o mesmo aluno pode ter duas cópias do mesmo livro emprestadas ao mesmo tempo<br>
+-livros podem ser emprestados mesmo quando tem 0 cópias ou cópias negativas<br>
+-tela de erro de máximo de empréstimos não especifica o porquê<br>
+-ordem da listagem de livros emprestados pode causar confusão<br>
