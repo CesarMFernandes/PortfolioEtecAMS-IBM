@@ -1,3 +1,5 @@
+<h1>Caixa preta e Não funcionais</h1>
+
 GERAL:
 -botões de cadastrar invisíveis em todas as páginas
 -botões de confirmação difíceis de ler
@@ -9,6 +11,7 @@ INÍCIO:
 
 ALUNOS:
 -cadastro de alunos aceita quase qualquer de valor
+-cadastro de alunos aceita emails iguais
 -exclusão de alunos não funciona
 
 LIVROS:
