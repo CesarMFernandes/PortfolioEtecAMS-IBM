@@ -288,8 +288,17 @@ create procedure criar_auditoria_log(
     in data_hora_dada datetime
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar log';
+	END;
+	
+	start transaction;
 	insert into auditoria_log(tabela, operacao, usuario, valor_antigo, valor_novo, data_hora)
     values(tabela_dada, operacao_dada, usuario_dado, valor_antigo_dado, valor_atual_dado, data_hora_dada);
+    commit;
 end//
 delimiter ;
 
@@ -298,7 +307,16 @@ create procedure informacoes_assinantes(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao encontrar assinante';
+	END;
+	
+	start transaction;
 	select * from assinantes where id = id_dado;
+    commit;
 end//
 delimiter ;
 
@@ -311,9 +329,18 @@ create procedure criar_assinantes(
 	in uf_dado char(2)
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar assinante. Verifique os dados inseridos novamente';
+	END;
+	
+	start transaction;
 	insert into assinantes(nome, cpf, email, data_nascimento, uf)
 	values(nome_dado, cpf_dado, email_dado, data_nascimento_dado, uf_dado);
     call criar_auditoria_log("assinantes", "insert", user(), null, nome_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -323,12 +350,23 @@ create procedure inserir_saldo(
 	in saldo_dado decimal(10, 2)
 )
 begin
+
 	declare v_saldo decimal(10,2);
     declare novo_saldo decimal(10,2);
+    
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao inserir saldo. Possível erro no id ou saldo inserido';
+	END;
+	
+	start transaction;
     select saldo into v_saldo from assinantes where id = id_dado;
     set novo_saldo = v_saldo + saldo_dado;
 	update assinantes set saldo = novo_saldo where id = id_dado;
     call criar_auditoria_log("assinantes", "update", user(), v_saldo, novo_saldo, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -340,6 +378,14 @@ create procedure assinatura(
 )
 begin
 	declare v_saldo decimal(10, 2);
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao cobrar assinatura. Possível erro no id ou valor de mensalidade';
+	END;
+	
+	start transaction;
     
     -- Buscar saldo
     select saldo
@@ -353,6 +399,7 @@ begin
 	where id = id_dado;
 	set novo_saldo = v_saldo - valor_mensalidade_dado;
     call criar_auditoria_log("assinantes", "update", user(), v_saldo, novo_saldo, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -363,13 +410,22 @@ create procedure atualizar_nome_assinantes(
 )
 begin
 	declare v_nome varchar(50);
-    select nome into v_nome from assinantes where id = id_dado;
+    
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar nome. Verifique se o nome é válido';
+	END;
 	
+	start transaction;
+    select nome into v_nome from assinantes where id = id_dado;	
 	update assinantes set 
 	nome = nome_dado
 	where id = id_dado;
     
     call criar_auditoria_log("assinantes", "update", user(), v_nome, nome_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -380,13 +436,22 @@ create procedure atualizar_cpf_assinantes(
 )
 begin
 	declare v_cpf varchar(11);
-    select cpf into v_cpf from assinantes where id = id_dado;
+    
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar cpf. Verifique se o cpf é válido';
+	END;
 	
+	start transaction;
+    select cpf into v_cpf from assinantes where id = id_dado;
 	update assinantes set 
 	cpf = cpf_dado
 	where id = id_dado;
     
     call criar_auditoria_log("assinantes", "update", user(), v_cpf, cpf_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -397,6 +462,15 @@ create procedure atualizar_email_assinantes(
 )
 begin
 	declare v_email varchar(100);
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar email. Verifique se o email é válido';
+	END;
+	
+	start transaction;
     select email into v_email from assinantes where id = id_dado;
 	
 	update assinantes set 
@@ -404,6 +478,7 @@ begin
 	where id = id_dado;
     
     call criar_auditoria_log("assinantes", "update", user(), v_email, email_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -414,6 +489,15 @@ create procedure atualizar_data_nascimento_assinantes(
 )
 begin
 	declare v_data_nascimento date;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar data de nascimento. Verifique se a data é válida';
+	END;
+	
+	start transaction;
     select data_nascimento into v_data_nascimento from assinantes where id = id_dado;
 	
 	update assinantes set 
@@ -421,6 +505,7 @@ begin
 	where id = id_dado;
     
     call criar_auditoria_log("assinantes", "update", user(), v_data_nascimento, data_nascimento_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -431,6 +516,15 @@ create procedure atualizar_uf_assinantes(
 )
 begin
 	declare v_uf char(2);
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar data de nascimento. Verifique se uf inserido são duas letras';
+	END;
+	
+	start transaction;
     select uf into v_uf from assinantes where id = id_dado;
 	
 	update assinantes set 
@@ -438,6 +532,7 @@ begin
 	where id = id_dado;
     
     call criar_auditoria_log("assinantes", "update", user(), v_uf, uf_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -446,7 +541,16 @@ create procedure listar_perfis(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao listar perfis. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	select * from perfis where assinante_id = id_dado and ativo = 1;
+    commit;
 end//
 delimiter ;
 
@@ -456,10 +560,19 @@ create procedure criar_perfis(
     in nome_exibicao_dado varchar(30)
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao criar perfil. Verifique se id está correto e nome tenha menos de 30 caracteres';
+	END;
+	
+	start transaction;
 	insert into perfis(nome_exibicao, assinante_id)
 	values(nome_exibicao_dado, id_dado);
     
     call criar_auditoria_log("perfis", "insert", user(), null, nome_exibicao_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -470,6 +583,15 @@ create procedure atualizar_perfis(
 )
 begin
 	declare v_nome_exibicao varchar(30);
+    
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar perfil. Verifique se id está correto e nome tenha menos de 30 caracteres';
+	END;
+	
+	start transaction;
     select nome_exibicao into v_nome_exibicao from perfis where id = id_dado;
 
 	update perfis set
@@ -477,6 +599,7 @@ begin
 	where id = id_dado;
     
     call criar_auditoria_log("perfis", "insert", user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -486,10 +609,19 @@ create procedure registrar_preferencias(
     in preferencia_dada enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário")
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar preferência. Verifique se id está correto e preferência esteja na lista de gêneros';
+	END;
+	
+	start transaction;
 	insert into preferencias(perfil_id, preferencia)
 	values(id_dado, preferencia_dada);
     
     call criar_auditoria_log("preferencias", "insert", user(), null, preferencia_dada, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -498,7 +630,16 @@ create procedure listar_preferencias(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao listar preferências. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	select * from preferencias where perfil_id = id_dado;
+    commit;
 end//
 delimiter ;
 
@@ -507,8 +648,17 @@ create procedure remover_preferencias(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao remover preferência. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	delete from preferencias where id = id_dado;
     call criar_auditoria_log("preferencias", "delete", user(), id_dado, null, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -517,11 +667,20 @@ create procedure desativar_perfis(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao desativar perfil. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	update perfis set 
 	ativo = 0
 	where id = id_dado;
     
     call criar_auditoria_log("perfis", "update", user(), 1, 0, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -530,11 +689,20 @@ create procedure listar_filmes(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao listar filmes. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	select videos.id as Id_do_Vídeo, filmes.id as Id_do_Filme, videos.titulo as Título, sec_to_time(duracao_segundos) as Duracao_do_Filme
 	from filmes
 	inner join videos on filmes.video_id = videos.id
 	inner join generofilmes on filmes.id = generofilmes.filme_id
 	where videos.ativo = 1 and generofilmes.genero in (select preferencia from preferencias where perfil_id = id_dado);
+    commit;
 end//
 delimiter ;
 
@@ -543,6 +711,14 @@ create procedure listar_series(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao listar séries. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	select series.id as Id_da_Serie, series.titulo as Título, count(distinct temporadas.id) as Quantidade_de_Temporadas, count(episodios.id) as Quantidade_de_Episódios
 	from series
 	inner join generoseries on series.id = generoseries.serie_id
@@ -551,6 +727,7 @@ begin
 	inner join videos on episodios.video_id = videos.id 
 	where videos.ativo = 1 and generoseries.genero in (select preferencia from preferencias where perfil_id = id_dado)
 	having count(episodios.id) >= 1;
+    commit;
 end//
 delimiter ;
 
@@ -586,11 +763,20 @@ create procedure marcar_concluido(
     in video_id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao marcar concluído. Verifique se id do perfil e do vídeo estão corretos';
+	END;
+	
+	start transaction;
 	update reproducoes set
 	concluido = 1
 	where perfil_id = perfil_id_dado and video_id = video_id_dado;
     
     call criar_auditoria_log("reproducoes", "update", user(), 0, 1, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -601,6 +787,15 @@ create procedure atualizar_tempo_sessao(
 )
 begin
 	declare v_tempo int;
+    
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar tempo. Verifique se id da reprodução e tempo estão corretos';
+	END;
+	
+	start transaction;
     select tempo_assistido_segundos into v_tempo from reproducoes where id = id_dado;
 
 	update reproducoes set
@@ -608,6 +803,7 @@ begin
 	where id = id_dado;
     
     call criar_auditoria_log("reproducoes", "update", user(), v_tempo, tempo_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -616,6 +812,14 @@ create procedure painel_continuar_assistindo(
 	in id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao listar painel. Verifique se id está correto';
+	END;
+	
+	start transaction;
 	select videos.titulo as Vídeo, reproducoes.data_hora_inicio as Última_Visualização
 	from reproducoes
 	inner join videos on reproducoes.video_id = videos.id
@@ -623,6 +827,7 @@ begin
 	where perfis.id = id_dado and reproducoes.concluido = 0 and videos.ativo = 1
 	group by videos.id
 	order by Última_Visualização desc;
+    commit;
 end//
 delimiter ;
 
@@ -641,6 +846,14 @@ create procedure adicionar_filmes(
     in duracao_dada int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar filme. Verifique se o título tem menos de 50 caracteres e a duração está correta';
+	END;
+	
+	start transaction;
 	insert into videos(titulo, duracao_segundos)
 	values(titulo_dado, duracao_dada);
     
@@ -648,6 +861,7 @@ begin
 	values(LAST_INSERT_ID());
     
     call criar_auditoria_log("filmes", "insert", user(), null, titulo_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -657,9 +871,18 @@ create procedure editar_nome_videos(
     in titulo_dado varchar(50)
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar nome. Verifique se o título tem menos de 50 caracteres';
+	END;
+	
+	start transaction;
 	update videos set
     titulo = titulo_dado
     where id = id_dado;
+    commit;
 end//
 delimiter ;
 
@@ -669,9 +892,18 @@ create procedure colocar_generos_filmes(
     in genero_dado enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário")
 )
 	begin
+		DECLARE EXIT HANDLER FOR SQLEXCEPTION
+		BEGIN
+			ROLLBACK;
+			SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Erro ao registrar gênero do filme. Verifique se o id está correto e o gênero esteja na lista de gêneros';
+		END;
+		
+		start transaction;
 		insert into generofilmes(filme_id, genero)
 		values(filme_id_dado, genero_dado);
-        call criar_auditoria_log("generofilmes", "insert", user(), null, genero_dado, current_timestamp());
+		call criar_auditoria_log("generofilmes", "insert", user(), null, genero_dado, current_timestamp());
+		commit;
 	end//
 delimiter ;
 
@@ -681,9 +913,18 @@ create procedure colocar_produtoras(
     in produtora_id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar produtora do vídeo. Verifique se o id do vídeo e da produtora estão corretos';
+	END;
+	
+	start transaction;
 	insert into videosprodutoras(video_id, produtora_id)
 	values(video_id_dado, produtora_id_dado);
     call criar_auditoria_log("videosprodutoras", "insert", user(), null, produtora_id_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -692,10 +933,19 @@ create procedure adicionar_series(
     in titulo_dado varchar(50)
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar série. Verifique se o título tem menos de 50 caracteres';
+	END;
+	
+	start transaction;
 	insert into series(titulo)
 	values(titulo_dado);
-	end//
     call criar_auditoria_log("series", "insert", user(), null, titulo_dado, current_timestamp());
+    commit;
+end//
 delimiter ;
 
 delimiter //
@@ -704,9 +954,18 @@ create procedure colocar_generos_series(
     in genero_dado enum("Ação", "Comédia", "Drama", "Terror", "Ficção Científica", "Suspense", "Romance", "Fantasia", "Documentário")
 )
 	begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar gênero da série. Verifique se o id está correto e o gênero está na lista de gêneros';
+	END;
+	
+	start transaction;
 		insert into generoseries(serie_id, genero)
 		values(serie_id_dado, genero_dado);
         call criar_auditoria_log("generoseries", "insert", user(), null, genero_dado, current_timestamp());
+	commit;
 	end//
 delimiter ;
 
@@ -717,10 +976,18 @@ create procedure adicionar_temporadas(
     in serie_id_dado int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar temporada. Verifique se o id da série e o número da temporada estão corretos, e o título tem menos de 50 caracteres';
+	END;
+	
+	start transaction;
 	insert into temporadas(titulo, numero, serie_id)
-	values
-	(titulo_dado, numero_dado, serie_id_dado);
+	values(titulo_dado, numero_dado, serie_id_dado);
     call criar_auditoria_log("temporadas", "insert", user(), null, titulo_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -732,6 +999,14 @@ create procedure adicionar_episodios(
     in id_temporada_dada int
 )
 begin
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar episódio. Verifique se o id da temporada, duração e número estão corretas, e o título tem menos de 50 caracteres';
+	END;
+	
+	start transaction;
 	insert into videos(titulo, duracao_segundos)
 	values
 	(titulo_dado, duracao_dada);
@@ -742,6 +1017,7 @@ begin
     
     call criar_auditoria_log("videos", "insert", user(), null, titulo_dado, current_timestamp());
     call criar_auditoria_log("episodios", "insert", user(), null, titulo_dado, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -753,6 +1029,14 @@ begin
 	declare status_velho boolean;
     declare status_novo boolean;
     
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao atualizar status do vídeo. Verifique se o id está correto';
+	END;
+	
+	start transaction;
     select ativo into status_velho from videos where id = id_dado;
 
 	update videos set
@@ -762,6 +1046,7 @@ begin
     select ativo into status_novo from videos where id = id_dado;
     
     call criar_auditoria_log("videos", "insert", user(), status_velho, status_novo, current_timestamp());
+    commit;
 end//
 delimiter ;
 
@@ -823,6 +1108,15 @@ BEGIN
 
     DECLARE CONTINUE HANDLER FOR NOT FOUND
         SET v_fim = TRUE;
+        
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	BEGIN
+		ROLLBACK;
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Erro ao registrar faturamento. Verifique se a competência é uma data válida';
+	END;
+	
+	start transaction;
 
     OPEN cursor_produtoras;
 
@@ -843,6 +1137,7 @@ BEGIN
     END LOOP;
 
     CLOSE cursor_produtoras;
+    commit;
 END //
 
 DELIMITER ;
