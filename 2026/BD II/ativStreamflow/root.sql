@@ -118,6 +118,9 @@ create table faturamento_produtoras(
     minutos_consumidos int not null,
     foreign key (produtora_id) references produtoras(id) on delete restrict on update cascade
 );
+ALTER TABLE faturamento_produtoras
+ADD CONSTRAINT uq_produtora_competencia
+UNIQUE (produtora_id, competencia);
 
 /*Cria um registro para cada query sql*/
 create table auditoria_log( 
@@ -382,7 +385,7 @@ begin
 	BEGIN
 		ROLLBACK;
 		SIGNAL SQLSTATE '45000'
-		SET MESSAGE_TEXT = 'Erro ao cobrar assinatura. Possível erro no id ou valor de mensalidade';
+		SET MESSAGE_TEXT = 'Erro ao cobrar assinatura. Possível erro no id, valor de mensalidade, ou saldo insuficiente';
 	END;
 	
 	start transaction;
@@ -521,7 +524,7 @@ begin
 	BEGIN
 		ROLLBACK;
 		SIGNAL SQLSTATE '45000'
-		SET MESSAGE_TEXT = 'Erro ao atualizar data de nascimento. Verifique se uf inserido são duas letras';
+		SET MESSAGE_TEXT = 'Erro ao atualizar uf. Verifique se uf inserido são duas letras';
 	END;
 	
 	start transaction;
@@ -564,7 +567,7 @@ begin
 	BEGIN
 		ROLLBACK;
 		SIGNAL SQLSTATE '45000'
-		SET MESSAGE_TEXT = 'Erro ao criar perfil. Verifique se id está correto e nome tenha menos de 30 caracteres';
+		SET MESSAGE_TEXT = 'Erro ao criar perfil. Verifique se id está correto e nome tenha menos de 30 caracteres, ou que não tenha mais de 5 perfis ou perfis com nomes iguais';
 	END;
 	
 	start transaction;
@@ -588,7 +591,7 @@ begin
 	BEGIN
 		ROLLBACK;
 		SIGNAL SQLSTATE '45000'
-		SET MESSAGE_TEXT = 'Erro ao atualizar perfil. Verifique se id está correto e nome tenha menos de 30 caracteres';
+		SET MESSAGE_TEXT = 'Erro ao atualizar perfil. Verifique se id está correto e nome tenha menos de 30 caracteres, ou que não tenha perfis com nomes iguais';
 	END;
 	
 	start transaction;
@@ -598,7 +601,7 @@ begin
 	nome_exibicao = nome_exibicao_dado
 	where id = id_dado;
     
-    call criar_auditoria_log("perfis", "insert", user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
+    call criar_auditoria_log("perfis", "update", user(), v_nome_exibicao, nome_exibicao_dado, current_timestamp());
     commit;
 end//
 delimiter ;
@@ -613,7 +616,7 @@ begin
 	BEGIN
 		ROLLBACK;
 		SIGNAL SQLSTATE '45000'
-		SET MESSAGE_TEXT = 'Erro ao registrar preferência. Verifique se id está correto e preferência esteja na lista de gêneros';
+		SET MESSAGE_TEXT = 'Erro ao registrar preferência. Verifique se id está correto e preferência esteja na lista de gêneros, ou que não tenha preferências iguais para este perfil';
 	END;
 	
 	start transaction;
@@ -1045,7 +1048,7 @@ begin
     
     select ativo into status_novo from videos where id = id_dado;
     
-    call criar_auditoria_log("videos", "insert", user(), status_velho, status_novo, current_timestamp());
+    call criar_auditoria_log("videos", "update", user(), status_velho, status_novo, current_timestamp());
     commit;
 end//
 delimiter ;
