@@ -1286,7 +1286,7 @@ begin
 	inner join temporadas on series.id = temporadas.serie_id
 	inner join episodios on temporadas.id = episodios.temporada_id
 	inner join videos on episodios.video_id = videos.id
-	where videos.ativo = 1 and temporadas.id = id_dado
+	where videos.ativo = 1 and series.id = id_dado
 	order by Número_da_Temporada, Número_do_Episódio;
 end//
 delimiter ;
