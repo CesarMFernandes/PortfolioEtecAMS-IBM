@@ -1,0 +1,1 @@
+Com esta atividade, aprendí a base do uso de MongoDB: cadastrar na plataforma, criar um cluster, criar e gerenciar contas, manusear ips, vincular ao vscode e sintaxes de criação, leitura, edição e deleção. Vou considerar usar o MongoDB em projetos futuros, e já estou utilizando no projeto atual do Hydrovel.
